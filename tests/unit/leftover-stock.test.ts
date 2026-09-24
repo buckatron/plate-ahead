@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { remainingBatchQuantity } from "../../src/domain/meals/leftover-stock";
+import { remainingBatchQuantity, unallocatedBatchQuantity } from "../../src/domain/meals/leftover-stock";
 
 describe("leftover batch balance", () => {
   it("deducts confirmed consumption without changing the original batch", () => {
@@ -21,5 +21,12 @@ describe("leftover batch balance", () => {
 
   it("deducts a partial discard while preserving the rest", () => {
     expect(remainingBatchQuantity(300_000, [{ type: "discard", quantityMilli: 50_000 }])).toBe(250_000);
+  });
+
+  it("shows only the amount left beyond planned lunch reservations", () => {
+    expect(unallocatedBatchQuantity(300_000, [], 200_000)).toBe(100_000);
+    expect(unallocatedBatchQuantity(300_000, [{ type: "consume", quantityMilli: 200_000 }], 0)).toBe(100_000);
+    expect(unallocatedBatchQuantity(300_000, [{ type: "discard", quantityMilli: 150_000 }], 200_000)).toBe(0);
+    expect(() => unallocatedBatchQuantity(300_000, [], -1)).toThrow(/Invalid/);
   });
 });

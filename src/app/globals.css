@@ -46,6 +46,17 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .settings-saved { color: #397254; }
 .note { background: #e5e9d8; padding: 23px 26px; border-radius: 16px; }
 .note p { font-family: Georgia, serif; font-size: 22px; line-height: 1.2; margin: 12px 0 0; max-width: 240px; }
+.leftover-overview h2 { font-size: 23px; }
+.overview-intro, .overview-empty, .overview-caution { color: #66766a; font-size: 12px; line-height: 1.5; }
+.overview-intro { margin: 12px 0 19px; }
+.leftover-overview h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #66806c; margin: 18px 0 7px; }
+.leftover-overview ul { list-style: none; padding: 0; margin: 0; }
+.leftover-overview li { padding: 9px 0; border-top: 1px solid #e6eae3; font-size: 12px; line-height: 1.4; }
+.leftover-overview li a { color: #28553c; font-weight: 700; text-decoration: none; }
+.leftover-overview li a:hover { text-decoration: underline; }
+.leftover-overview li span, .leftover-overview li small { display: block; color: #6b796e; margin-top: 2px; }
+.leftover-overview li .overview-attention { display: inline-block; margin-top: 5px; color: #9a512f; font-size: 11px; }
+.overview-caution { border-top: 1px solid #e6eae3; padding-top: 11px; margin: 18px 0 0; font-size: 11px; }
 .slot-list { margin-top: 20px; }
 .slot { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 13px 0; border-top: 1px solid #e6eae3; font-size: 13px; }
 .slot span { color: #6b796e; }

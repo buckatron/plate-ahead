@@ -7,6 +7,8 @@ import { findHousehold } from "@/repositories/households";
 import { findActivePlanReference, findLatestPlan, findPlanById } from "@/repositories/plans";
 import { SiteHeader } from "@/components/site-header";
 import { SettingsForm } from "@/components/settings-form";
+import { LeftoverOverview } from "@/components/leftover-overview";
+import { getLeftoverOverview } from "@/services/leftover-overview";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   cookingError?: string; cookingSaved?: string; lunchError?: string; lunchSaved?: string;
   batchError?: string; batchSaved?: string; planId?: string }> }) {
   const household = await findHousehold("home");
+  const leftoverOverview = household ? await getLeftoverOverview(household.id) : null;
   const { planningError, acceptError, swapError, swapSaved, lockError, repairError, repairSaved,
     cookingError, cookingSaved, lunchError, lunchSaved, batchError, batchSaved, planId } = await searchParams;
   const latestPlan = household ? await findLatestPlan(household.id) : null;
@@ -218,6 +221,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <div className="panel-head"><h2>Planning for</h2><span className="subtle">{household?.name ?? "Our kitchen"}</span></div>
               {household && <SettingsForm settings={household.settings} hasPlan={Boolean(plan)} />}
             </div>
+            {household && leftoverOverview && <LeftoverOverview overview={leftoverOverview} timezone={household.timezone} />}
             <div className="note"><span className="note-label">Our approach</span><p>Ingredients can repeat. The meal should still feel new.</p></div>
           </div>
         </section>

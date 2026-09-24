@@ -17,3 +17,8 @@ export function remainingBatchQuantity(initialMilli: number, movements: readonly
   }
   return remaining;
 }
+
+export function unallocatedBatchQuantity(initialMilli: number, movements: readonly StockMovement[], reservedMilli: number): number {
+  if (!Number.isSafeInteger(reservedMilli) || reservedMilli < 0) throw new Error("Invalid planned reservation.");
+  return Math.max(0, remainingBatchQuantity(initialMilli, movements) - reservedMilli);
+}

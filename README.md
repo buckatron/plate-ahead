@@ -12,6 +12,8 @@ On an accepted week, **Mark dinner cooked** records servings eaten and the reusa
 
 Once the source dinner is cooked, **Mark lunch eaten** records the planned lunch servings and deducts its reserved quantity from the confirmed batch. The remaining balance is calculated from that batch and its movements, and duplicate submissions cannot consume it twice. You can mark a batch frozen or thawed and record a partial or full discard; discarding too much is rejected and a linked lunch is flagged if its reserved food is no longer available. Partial lunches and manual stock adjustments are still future work.
 
+The home-page sidebar now shows linked lunches still on accepted plans and confirmed saved food beyond any outstanding lunch reservation. It includes food from earlier weeks so an unused batch is not hidden when you generate a new plan. Stored dates are memory aids, not food-safety advice.
+
 ## Run locally
 
 Requires Node.js 20.19+, 22.12+, or 24+. Run these commands from the project directory.
