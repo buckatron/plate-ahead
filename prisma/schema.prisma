@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Household {
+  id          String @id @default(cuid())
+  name        String
+  timezone    String @default("America/Los_Angeles")
+  servings    Int    @default(2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  preferences HouseholdPreferences?
+  ingredients HouseholdIngredient[]
+  plans       MealPlan[]
+  groceryLists GroceryList[]
+}
+
+model HouseholdPreferences {
+  householdId       String @id
+  dinnerCount       Int    @default(6)
+  lunchCount        Int    @default(2)
+  maxDinnerMinutes  Int    @default(60)
+  varietyPreference String @default("balanced")
+  exclusionsJson    String @default("[]")
+  household         Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+model Ingredient {
+  id             String @id @default(cuid())
+  name           String @unique
+  groceryCategory String
+  defaultUnit    String
+  aliasesJson    String @default("[]")
+  packageMilli   Int?
+  packageUnit    String?
+  householdItems HouseholdIngredient[]
+  recipeItems    RecipeIngredient[]
+  groceryLines   GroceryLine[]
+}
+
+model HouseholdIngredient {
+  householdId String
+  ingredientId String
+  quantityMilli Int?
+  unit        String?
+  isStaple    Boolean @default(false)
+  useFirst    Boolean @default(false)
+  confirmedAt DateTime?
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  ingredient  Ingredient @relation(fields: [ingredientId], references: [id])
+  @@id([householdId, ingredientId])
+}
+
+model Recipe {
+  id               String @id @default(cuid())
+  recipeKey        String
+  version          Int
+  title            String
+  summary          String
+  role             String
+  baseServings     Int
+  activeMinutes    Int
+  totalMinutes     Int
+  sourceUrl        String?
+  sourceAttribution String?
+  reviewStatus     String @default("draft")
+  contentHash      String @default("")
+  createdAt        DateTime @default(now())
+  tags             RecipeTag[]
+  components       RecipeComponent[]
+  steps            RecipeStep[]
+  slots            PlanSlot[]
+  @@unique([recipeKey, version])
+}
+
+model RecipeTag {
+  recipeId String
+  dimension String
+  value String
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  @@id([recipeId, dimension, value])
+}
+
+model RecipeComponent {
+  id                  String @id @default(cuid())
+  recipeId            String
+  name                String
+  baseYieldMilli      Int
+  yieldUnit           String
+  reservable          Boolean @default(false)
+  preparation         String
+  storageGuidance     String?
+  storageSourceUrl    String?
+  recipe              Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredients         RecipeIngredient[]
+  steps               RecipeStep[]
+  planned             PlannedComponent[]
+  sourceTransformations Transformation[]
+  transformationInputs TransformationInput[]
+}
+
+model RecipeIngredient {
+  id            String @id @default(cuid())
+  componentId   String
+  ingredientId  String
+  quantityMilli Int
+  unit          String
+  preparation   String?
+  optional      Boolean @default(false)
+  component     RecipeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id])
+}
+
+model RecipeStep {
+  recipeId    String
+  sequence    Int
+  text        String
+  componentId String?
+  recipe      Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  component   RecipeComponent? @relation(fields: [componentId], references: [id])
+  @@id([recipeId, sequence])
+}
+
+model Transformation {
+  id                 String @id @default(cuid())
+  sourceComponentId  String
+  targetRecipeKey    String
+  description        String
+  compatibleState    String
+  storageGuidance    String?
+  storageSourceUrl   String?
+  sourceComponent    RecipeComponent @relation(fields: [sourceComponentId], references: [id])
+  inputs             TransformationInput[]
+  allocations       ComponentAllocation[]
+}
+
+model TransformationInput {
+  id               String @id @default(cuid())
+  transformationId String
+  targetComponentId String
+  requiredMilli    Int
+  unit             String
+  transformation   Transformation @relation(fields: [transformationId], references: [id], onDelete: Cascade)
+  targetComponent  RecipeComponent @relation(fields: [targetComponentId], references: [id])
+}
+
+model MealPlan {
+  id           String @id @default(cuid())
+  householdId  String
+  weekStart    String
+  state        String @default("draft")
+  settingsJson String
+  revision     Int @default(1)
+  generationIndex Int @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  slots        PlanSlot[]
+  groceryList  GroceryList?
+  @@index([householdId, weekStart])
+  @@unique([householdId, weekStart, generationIndex])
+}
+
+model PlanSlot {
+  id               String @id @default(cuid())
+  planId           String
+  localDate        String
+  mealKind         String
+  slotType         String
+  recipeId         String?
+  servings         Int?
+  locked           Boolean @default(false)
+  status           String @default("planned")
+  reason           String?
+  plan             MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  recipe           Recipe? @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  components       PlannedComponent[]
+  incomingAllocations ComponentAllocation[]
+  @@unique([planId, localDate, mealKind])
+}
+
+model PlannedComponent {
+  id                 String @id @default(cuid())
+  slotId             String
+  recipeComponentId  String
+  preparationMilli   Int
+  plannedYieldMilli  Int
+  mealUseMilli       Int
+  unit               String
+  slot               PlanSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  recipeComponent    RecipeComponent @relation(fields: [recipeComponentId], references: [id])
+  outgoingAllocations ComponentAllocation[]
+  @@unique([slotId, recipeComponentId])
+}
+
+model ComponentAllocation {
+  id                 String @id @default(cuid())
+  sourceComponentId  String
+  destinationSlotId  String
+  transformationId   String
+  reservedMilli      Int
+  unit               String
+  state              String @default("planned")
+  sourceComponent    PlannedComponent @relation(fields: [sourceComponentId], references: [id], onDelete: Cascade)
+  destinationSlot    PlanSlot @relation(fields: [destinationSlotId], references: [id], onDelete: Cascade)
+  transformation     Transformation @relation(fields: [transformationId], references: [id])
+  @@index([destinationSlotId])
+}
+
+model GroceryList {
+  id                String @id @default(cuid())
+  householdId       String
+  planId            String @unique
+  generatedRevision Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  household         Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  plan              MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  lines             GroceryLine[]
+  @@index([householdId])
+}
+
+model GroceryLine {
+  id           String @id @default(cuid())
+  listId       String
+  ingredientId String
+  unitGroup    String
+  onHandMilli  Int?
+  checked      Boolean @default(false)
+  updatedAt    DateTime @updatedAt
+  list         GroceryList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  @@unique([listId, ingredientId, unitGroup])
+}

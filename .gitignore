@@ -1,0 +1,9 @@
+node_modules/
+.next/
+coverage/
+src/generated/
+/dev.db*
+prisma/dev.db*
+.env*
+!.env.example
+*.tsbuildinfo
