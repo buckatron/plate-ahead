@@ -180,11 +180,13 @@ model PlanSlot {
   locked           Boolean @default(false)
   status           String @default("planned")
   reason           String?
+  consumptionRequestId String?
   plan             MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   recipe           Recipe? @relation(fields: [recipeId], references: [id], onDelete: Restrict)
   components       PlannedComponent[]
   incomingAllocations ComponentAllocation[]
   cookingEvent CookingEvent?
+  leftoverMovements LeftoverMovement[]
   @@unique([planId, localDate, mealKind])
 }
 
@@ -241,7 +243,23 @@ model LeftoverBatch {
   storedAt          DateTime @default(now())
   cookingEvent      CookingEvent @relation(fields: [cookingEventId], references: [id], onDelete: Cascade)
   recipeComponent   RecipeComponent @relation(fields: [recipeComponentId], references: [id], onDelete: Restrict)
+  movements         LeftoverMovement[]
   @@unique([cookingEventId, recipeComponentId])
+}
+
+model LeftoverMovement {
+  id                String @id @default(cuid())
+  batchId           String
+  destinationSlotId String
+  requestId         String
+  type              String @default("consume")
+  quantityMilli     Int
+  recordedAt        DateTime @default(now())
+  batch             LeftoverBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  destinationSlot   PlanSlot @relation(fields: [destinationSlotId], references: [id], onDelete: Restrict)
+  @@unique([batchId, destinationSlotId])
+  @@unique([batchId, requestId])
+  @@index([destinationSlotId])
 }
 
 model GroceryList {

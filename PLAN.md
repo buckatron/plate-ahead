@@ -290,6 +290,7 @@ Acceptance: replacing a dinner never leaves an orphan lunch, overallocated compo
 
 - [x] Add an idempotent cooked check-in with actual servings and reserved quantities.
 - [x] Create actual leftover batches only after confirmation.
+- [x] Record consumption of a planned linked lunch against confirmed leftover batches with an idempotent movement ledger.
 - [ ] Record lunch consumption, freezing, adjustments, and discarding.
 - [ ] Show upcoming lunches and batches without a planned use.
 - [ ] Add optional reactions, effort/leftover reasons, and recipe cooldowns.

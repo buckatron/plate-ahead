@@ -19,7 +19,7 @@ export async function getGroceryNeeds(householdId: string, planId: string) {
 
   const components: GroceryComponent[] = [];
   for (const slot of plan.slots) {
-    if (!["planned", "needs_attention", "cooked"].includes(slot.status) || !slot.recipe) continue;
+    if (!["planned", "needs_attention", "cooked", "eaten"].includes(slot.status) || !slot.recipe) continue;
     for (const planned of slot.components) {
       const source = planned.recipeComponent;
       if (source.recipeId !== slot.recipeId) throw new Error("A planned component does not match its recipe.");

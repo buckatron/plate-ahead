@@ -8,7 +8,7 @@ const planInclude = {
   slots: { orderBy: [{ localDate: "asc" }, { mealKind: "desc" }], include: {
     recipe: true,
     components: { include: { recipeComponent: true, outgoingAllocations: true } },
-    cookingEvent: { include: { batches: { include: { recipeComponent: true } } } },
+    cookingEvent: { include: { batches: { include: { recipeComponent: true, movements: true } } } },
     incomingAllocations: { include: { sourceComponent: { include: { slot: { include: { recipe: true } } } } } },
   } },
 } satisfies Prisma.MealPlanInclude;

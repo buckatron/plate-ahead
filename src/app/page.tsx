@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
-import { acceptPlanAction, generateWeekAction, recordCookingAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
+import { acceptPlanAction, consumeLunchAction, generateWeekAction, recordCookingAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
 import { formatQuantity } from "@/domain/meals/scale-recipe";
+import { remainingBatchQuantity } from "@/domain/meals/leftover-stock";
 import { findHousehold } from "@/repositories/households";
 import { findActivePlanReference, findLatestPlan, findPlanById } from "@/repositories/plans";
 import { SiteHeader } from "@/components/site-header";
@@ -11,10 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ planningError?: string; acceptError?: string;
   swapError?: string; swapSaved?: string; lockError?: string; repairError?: string; repairSaved?: string;
-  cookingError?: string; cookingSaved?: string; planId?: string }> }) {
+  cookingError?: string; cookingSaved?: string; lunchError?: string; lunchSaved?: string; planId?: string }> }) {
   const household = await findHousehold("home");
   const { planningError, acceptError, swapError, swapSaved, lockError, repairError, repairSaved,
-    cookingError, cookingSaved, planId } = await searchParams;
+    cookingError, cookingSaved, lunchError, lunchSaved, planId } = await searchParams;
   const latestPlan = household ? await findLatestPlan(household.id) : null;
   const plan = household && planId ? await findPlanById(household.id, planId) ?? latestPlan : latestPlan;
   const activePlan = household && plan ? await findActivePlanReference(household.id, plan.weekStart) : null;
@@ -53,6 +54,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {lockError && <p className="plan-error" role="alert">{lockError}</p>}
             {repairError && <p className="plan-error" role="alert">{repairError}</p>}
             {cookingError && <p className="plan-error" role="alert">{cookingError}</p>}
+            {lunchError && <p className="plan-error" role="alert">{lunchError}</p>}
+            {lunchSaved && <p className="settings-message settings-saved" role="status">Lunch recorded. Its reserved food was deducted from the confirmed batch.</p>}
             {cookingSaved && <p className="settings-message settings-saved" role="status">{cookingSaved === "shortfall"
               ? "Dinner recorded. A linked lunch needs attention because less food was saved than planned."
               : "Dinner and confirmed leftovers recorded."}</p>}
@@ -97,6 +100,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                         <strong>{slot.slotType === "eat_out" ? "Eat out" : "Flexible night"}</strong>}
                       {slot.reason && <p>{slot.reason}</p>}
                       {slot.status === "needs_attention" && <p className="meal-warning" role="status">Lunch needs attention: supply the missing food separately or cancel it.</p>}
+                      {slot.status === "eaten" && <p className="cooked-summary">Lunch eaten · planned servings recorded.</p>}
                       {slot.mealKind === "lunch" && ["planned", "needs_attention"].includes(slot.status) &&
                         <p>From {slot.incomingAllocations[0]?.sourceComponent.slot.recipe?.title ?? "a previous dinner"}.</p>}
                       {slot.mealKind === "lunch" && ["planned", "needs_attention"].includes(slot.status) && plan.state !== "archived" &&
@@ -108,6 +112,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             <input type="hidden" name="expectedRevision" value={plan.revision} />
                             <input type="hidden" name="change" value="cancel-lunch" />
                             <button type="submit">Confirm lunch cancellation</button>
+                          </form>
+                        </details>}
+                      {slot.mealKind === "lunch" && slot.status === "planned" && plan.state === "active" &&
+                        slot.incomingAllocations.length > 0 && slot.incomingAllocations.every((allocation) => allocation.sourceComponent.slot.status === "cooked") &&
+                        <details className="meal-repair"><summary>Mark lunch eaten</summary>
+                          <p>Confirm that you ate the planned {slot.servings} servings. The reserved amount will be deducted from saved leftovers.</p>
+                          <form action={consumeLunchAction}>
+                            <input type="hidden" name="planId" value={plan.id} />
+                            <input type="hidden" name="slotId" value={slot.id} />
+                            <input type="hidden" name="expectedRevision" value={plan.revision} />
+                            <input type="hidden" name="requestId" value={randomUUID()} />
+                            <button type="submit">Confirm lunch eaten</button>
                           </form>
                         </details>}
                       {slot.mealKind === "dinner" && slot.slotType === "cook" && slot.status === "planned" && plan.state !== "archived" && <>
@@ -151,7 +167,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                         </details>}
                       {slot.cookingEvent && <p className="cooked-summary">Cooked · {slot.cookingEvent.servingsServed} servings eaten.
                         {slot.cookingEvent.batches.length ? ` Saved ${slot.cookingEvent.batches.map((batch) =>
-                          `${formatQuantity({ milli: batch.quantityMilli, unit: batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} ${batch.recipeComponent.name}`).join(", ")}.` : " No reusable food saved."}</p>}
+                          `${formatQuantity({ milli: batch.quantityMilli, unit: batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} ${batch.recipeComponent.name} (${formatQuantity({ milli: remainingBatchQuantity(batch.quantityMilli, batch.movements), unit: batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} remaining)`).join(", ")}.` : " No reusable food saved."}</p>}
                     </div>
                   </div>)}
                 </section>)}

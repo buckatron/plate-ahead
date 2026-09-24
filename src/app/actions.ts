@@ -11,6 +11,7 @@ import { acceptPlan, PlanAcceptanceError } from "@/services/accept-plan";
 import { PlanLockError, setDinnerLocked } from "@/services/plan-lock";
 import { PlanRepairError, repairPlan } from "@/services/repair-plan";
 import { CookingError, recordCooking } from "@/services/record-cooking";
+import { consumeLunch, LunchConsumptionError } from "@/services/consume-lunch";
 
 export type SettingsActionState = { status: "idle" | "saved" | "error"; message: string };
 
@@ -104,6 +105,22 @@ export async function recordCookingAction(formData: FormData) {
   }
   const params = new URLSearchParams({ planId: input.data.planId });
   params.set(error ? "cookingError" : "cookingSaved", error ?? (needsAttention ? "shortfall" : "1"));
+  redirect(`/?${params}#slot-${input.data.slotId}`);
+}
+
+export async function consumeLunchAction(formData: FormData) {
+  const input = z.object({ planId: z.uuid(), slotId: z.uuid(), expectedRevision: z.coerce.number().int().positive(),
+    requestId: z.uuid() }).safeParse(Object.fromEntries(formData));
+  if (!input.success) redirect("/?lunchError=Refresh%20the%20week%20and%20try%20again.");
+  let error: string | null = null;
+  try {
+    await consumeLunch({ householdId: "home", ...input.data });
+    revalidatePath("/");
+  } catch (cause) {
+    error = cause instanceof LunchConsumptionError ? cause.message : "Could not record lunch. Please try again.";
+  }
+  const params = new URLSearchParams({ planId: input.data.planId });
+  params.set(error ? "lunchError" : "lunchSaved", error ?? "1");
   redirect(`/?${params}#slot-${input.data.slotId}`);
 }
 
