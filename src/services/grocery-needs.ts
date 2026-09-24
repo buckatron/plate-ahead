@@ -1,7 +1,7 @@
 import "server-only";
 
 import { aggregateGroceryNeeds, type GroceryComponent } from "@/domain/meals/groceries";
-import { parseOnHandAmount, reviewGroceryNeed } from "@/domain/meals/grocery-review";
+import { findUnallocatedPurchases, parseOnHandAmount, reviewGroceryNeed } from "@/domain/meals/grocery-review";
 import { toBaseQuantity, unitSchema } from "@/domain/meals/quantity";
 import { prisma } from "@/services/prisma";
 
@@ -10,7 +10,7 @@ export class GroceryActionError extends Error {}
 export async function getGroceryNeeds(householdId: string, planId: string) {
   const plan = await prisma.mealPlan.findFirst({
     where: { id: planId, householdId },
-    include: { groceryList: { include: { lines: true } }, slots: { include: {
+    include: { groceryList: { include: { lines: { include: { ingredient: true } } } }, slots: { include: {
       recipe: true,
       components: { include: { recipeComponent: { include: { ingredients: { include: { ingredient: true } } } } } },
     } } },
@@ -39,8 +39,13 @@ export async function getGroceryNeeds(householdId: string, planId: string) {
   }
 
   const savedLines = new Map(plan.groceryList?.lines.map((line) => [`${line.ingredientId}:${line.unitGroup}`, line]) ?? []);
+  const needs = aggregateGroceryNeeds(components);
   return { plan: { id: plan.id, weekStart: plan.weekStart, state: plan.state, revision: plan.revision },
-    needs: aggregateGroceryNeeds(components).map((need) => reviewGroceryNeed(need, savedLines.get(need.key))) };
+    needs: needs.map((need) => reviewGroceryNeed(need, savedLines.get(need.key))),
+    unallocatedPurchased: findUnallocatedPurchases(needs, plan.groceryList?.lines.map((line) => ({
+      ingredientId: line.ingredientId, unitGroup: line.unitGroup, checked: line.checked,
+      name: line.ingredient.name, category: line.ingredient.groceryCategory,
+    })) ?? []) };
 }
 
 async function mutateGroceryLine(input: {
@@ -51,7 +56,9 @@ async function mutateGroceryLine(input: {
   if (!snapshot) throw new GroceryActionError("This plan is no longer available.");
   if (snapshot.plan.revision !== input.expectedRevision) throw new GroceryActionError("The plan changed. Refresh groceries before saving.");
   const need = snapshot.needs.find((line) => line.ingredientId === input.ingredientId && toBaseQuantity(line.quantity).group === input.unitGroup);
-  if (!need) throw new GroceryActionError("That ingredient is not in this plan. Refresh groceries before saving.");
+  const clearingUnallocated = !need && "checked" in input.change && !input.change.checked &&
+    snapshot.unallocatedPurchased.some((line) => line.ingredientId === input.ingredientId && line.unitGroup === input.unitGroup);
+  if (!need && !clearingUnallocated) throw new GroceryActionError("That ingredient is not in this plan. Refresh groceries before saving.");
 
   await prisma.$transaction(async (tx) => {
     const currentPlan = await tx.mealPlan.findFirst({ where: { id: input.planId, householdId: input.householdId }, select: { revision: true } });
@@ -63,11 +70,17 @@ async function mutateGroceryLine(input: {
       create: { householdId: input.householdId, planId: input.planId, generatedRevision: input.expectedRevision },
       update: { generatedRevision: input.expectedRevision },
     });
-    await tx.groceryLine.upsert({
-      where: { listId_ingredientId_unitGroup: { listId: list.id, ingredientId: input.ingredientId, unitGroup: input.unitGroup } },
-      create: { listId: list.id, ingredientId: input.ingredientId, unitGroup: input.unitGroup, ...input.change },
-      update: input.change,
-    });
+    if (clearingUnallocated) {
+      const cleared = await tx.groceryLine.updateMany({ where: { listId: list.id, ingredientId: input.ingredientId,
+        unitGroup: input.unitGroup, checked: true }, data: { checked: false } });
+      if (cleared.count !== 1) throw new GroceryActionError("This purchase check changed. Refresh groceries before saving.");
+    } else {
+      await tx.groceryLine.upsert({
+        where: { listId_ingredientId_unitGroup: { listId: list.id, ingredientId: input.ingredientId, unitGroup: input.unitGroup } },
+        create: { listId: list.id, ingredientId: input.ingredientId, unitGroup: input.unitGroup, ...input.change },
+        update: input.change,
+      });
+    }
   });
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { householdSettingsSchema, parseHouseholdSettingsForm } from "../../src/schemas/household";
 import { validateComponentUse } from "../../src/domain/meals/allocations";
 import { scaleQuantity, toBaseQuantity } from "../../src/domain/meals/quantity";
-import { validatePlanDraft, type PlanSlotDraft } from "../../src/domain/planning/plan";
+import { plannedSlotsForAcceptance, validatePlanDraft, type PlanSlotDraft } from "../../src/domain/planning/plan";
 
 const dinner: PlanSlotDraft = {
   id: "dinner-1", planId: "plan-1", householdId: "home", localDate: "2026-09-21",
@@ -75,5 +75,14 @@ describe("planning contracts", () => {
     const valid = parseHouseholdSettingsForm(fields);
     expect(valid.success).toBe(true);
     if (valid.success) expect(valid.data.exclusions).toEqual(["mushrooms", "shellfish"]);
+  });
+
+  it("accepts only an explicit, empty cancelled lunch as a resolved slot", () => {
+    const planned = { mealKind: "dinner", status: "planned", recipeId: "dinner-v1", servings: 2, components: [{}] };
+    const cancelled = { mealKind: "lunch", status: "cancelled", recipeId: null, servings: null, components: [] };
+    expect(plannedSlotsForAcceptance([planned, cancelled])).toEqual([planned]);
+    expect(() => plannedSlotsForAcceptance([{ ...cancelled, recipeId: "lunch-v1" }])).toThrow(/incomplete cancellation/);
+    expect(() => plannedSlotsForAcceptance([{ ...cancelled, mealKind: "dinner" }])).toThrow(/incomplete cancellation/);
+    expect(() => plannedSlotsForAcceptance([{ ...cancelled, components: [{}] }])).toThrow(/incomplete cancellation/);
   });
 });

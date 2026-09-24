@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { formatQuantity } from "@/domain/meals/scale-recipe";
+import { applySwapAction } from "@/app/swap/actions";
 import { getSwapShortlist } from "@/services/swap-options";
 
 export const dynamic = "force-dynamic";
 
-export default async function SwapPage({ searchParams }: { searchParams: Promise<{ planId?: string; slotId?: string }> }) {
-  const { planId, slotId } = await searchParams;
+export default async function SwapPage({ searchParams }: { searchParams: Promise<{ planId?: string; slotId?: string; swapError?: string }> }) {
+  const { planId, slotId, swapError } = await searchParams;
   if (!planId || !slotId) notFound();
   const result = await getSwapShortlist("home", planId, slotId);
   if (!result) notFound();
@@ -23,8 +24,9 @@ export default async function SwapPage({ searchParams }: { searchParams: Promise
       <h1>Something else<br /><em>for dinner.</em></h1>
       <p className="lead">{day}: currently {result.slot.title}.</p>
     </section>
-    <p className="swap-notice">These are previews of recipe needs, not the amount left to buy after pantry review. Your plan and grocery checks have not changed. Confirming a replacement is a future step.</p>
-    {result.slot.locked && <p className="plan-error">This meal is locked. Unlock it before a future swap can be applied.</p>}
+    <p className="swap-notice">The grocery changes below are recipe needs, before pantry review. Confirming a swap updates this plan and its linked lunch in one step. Saved on-hand amounts and purchase checks stay in place.</p>
+    {swapError && <p className="plan-error" role="alert">{swapError}</p>}
+    {(result.slot.locked || result.linkedLunch?.locked) && <p className="plan-error">This dinner or its linked lunch is locked, so the swap cannot be saved yet.</p>}
     {result.linkedLunch && <p className="swap-lunch-note">The current dinner supplies <strong>{result.linkedLunch.title}</strong>. Each alternative below shows what would happen to that lunch.</p>}
     {result.options.length ? <div className="recipe-grid swap-grid">{result.options.map((option) => <article className="recipe-card" key={option.recipe.id}>
       <div className="recipe-card-top"><span>{option.recipe.tags.cuisine?.[0] ?? "Different style"}</span></div>
@@ -45,6 +47,14 @@ export default async function SwapPage({ searchParams }: { searchParams: Promise
         </li>)}</ul> : <p>No ingredient quantities would change.</p>}
       </details>
       <Link className="text-link" href={`/recipes/${option.recipe.key}`}>View recipe →</Link>
+      {["draft", "active"].includes(result.plan.state) && !result.slot.locked && !result.linkedLunch?.locked &&
+        <form action={applySwapAction} className="swap-apply">
+          <input type="hidden" name="planId" value={result.plan.id} />
+          <input type="hidden" name="slotId" value={result.slot.id} />
+          <input type="hidden" name="recipeId" value={option.recipe.id} />
+          <input type="hidden" name="expectedRevision" value={result.plan.revision} />
+          <button type="submit">{result.linkedLunch && !option.lunch ? "Swap dinner & cancel lunch" : "Swap to this dinner"}</button>
+        </form>}
     </article>)}</div> : <div className="panel grocery-empty"><h2>No suitable alternatives yet</h2>
       <p>The remaining recipes are already planned or do not fit this plan’s time limit and exclusions. Try changing preferences and generating another draft.</p></div>}
   </div></main>;

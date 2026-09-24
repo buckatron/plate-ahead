@@ -34,11 +34,12 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
       <section className="grocery-heading">
         <p className="overline">Plan before shopping</p>
         <h1>Groceries<br /><em>for the week.</em></h1>
-        {result && <p className="lead">Week of {weekLabel} · {result.needs.length} ingredients · {result.plan.state} plan</p>}
+        {result && <p className="lead">Week of {weekLabel} · {result.needs.length} ingredients · {result.plan.state} plan
+          {result.unallocatedPurchased.length > 0 && ` · ${result.unallocatedPurchased.length} bought but no longer needed`}</p>}
       </section>
       {shoppingError && <p className="plan-error" role="alert">{shoppingError}</p>}
       {result ? <>
-        <p className="grocery-note">Recipe needs include extra dinner portions reserved for lunch and add new lunch ingredients once. Enter what you already have to see the amount still needed. A blank on-hand field means you have not checked yet; zero means you checked and have none. Optional ingredients are omitted.</p>
+        <p className="grocery-note">Recipe needs include extra dinner portions reserved for lunch and add new lunch ingredients once. Enter what you already have to see the amount still needed. A blank on-hand field means you have not checked yet; zero means you checked and have none. Optional ingredients are omitted. Bought checks stay saved when the plan changes.</p>
         {categories.size ? <div className="grocery-sections">
           {[...categories].map(([category, lines]) => <section className="panel grocery-category" key={category}>
             <h2>{category}</h2>
@@ -75,6 +76,22 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
             </li>})}</ul>
           </section>)}
         </div> : <div className="panel grocery-empty"><h2>No ingredients yet</h2><p>This plan has no cooked meals. Add dinners to see their grocery needs.</p></div>}
+        {result.unallocatedPurchased.length > 0 && <section className="panel grocery-unallocated">
+          <h2>Bought, but no longer needed</h2>
+          <p>These items were marked bought for an earlier version of this plan, but no current meal uses them. The check is preserved; purchase quantities were not recorded.</p>
+          <ul className="grocery-lines">{result.unallocatedPurchased.map((line) => <li key={`${line.ingredientId}:${line.unitGroup}`}
+            id={`line-${line.ingredientId}-${line.unitGroup}`}>
+            <div className="grocery-line-top"><strong>{line.name}</strong><span className="grocery-unallocated-category">{line.category} · {line.unitGroup}</span></div>
+            <form action={setPurchasedAction} className="grocery-unallocated-action">
+              <input type="hidden" name="planId" value={result.plan.id} />
+              <input type="hidden" name="expectedRevision" value={result.plan.revision} />
+              <input type="hidden" name="ingredientId" value={line.ingredientId} />
+              <input type="hidden" name="unitGroup" value={line.unitGroup} />
+              <input type="hidden" name="checked" value="0" />
+              <button type="submit">Undo bought check</button>
+            </form>
+          </li>)}</ul>
+        </section>}
       </> : <div className="panel grocery-empty"><h2>No plan yet</h2><p>Generate a week first, then its grocery needs will appear here.</p><Link className="text-link" href="/">Go to this week →</Link></div>}
     </div>
   </main>;

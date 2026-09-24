@@ -1,7 +1,7 @@
 import "server-only";
 
 import { addDays } from "@/domain/planning/generate-week";
-import { validatePlanDraft, type PlanSlotDraft } from "@/domain/planning/plan";
+import { plannedSlotsForAcceptance, validatePlanDraft, type PlanSlotDraft } from "@/domain/planning/plan";
 import type { ComponentUse } from "@/domain/meals/allocations";
 import { scaleQuantity, unitSchema } from "@/domain/meals/quantity";
 import { householdSettingsSchema } from "@/schemas/household";
@@ -29,21 +29,22 @@ export async function acceptPlan(householdId: string, planId: string, expectedRe
       const settings = householdSettingsSchema.parse(JSON.parse(plan.settingsJson) as unknown);
       const dinners = plan.slots.filter((slot) => slot.mealKind === "dinner");
       const lunches = plan.slots.filter((slot) => slot.mealKind === "lunch");
+      const plannedSlots = plannedSlotsForAcceptance(plan.slots);
       if (dinners.length !== 7 || dinners.filter((slot) => slot.slotType === "cook").length !== settings.dinnerCount ||
         dinners.filter((slot) => slot.slotType === "eat_out").length !== 1 ||
         lunches.length !== settings.lunchCount || lunches.some((slot) => slot.slotType !== "transformed_lunch") ||
         dinners.some((slot) => !["cook", "eat_out", "flexible"].includes(slot.slotType)) ||
-        plan.slots.some((slot) => slot.localDate < plan.weekStart || slot.localDate > addDays(plan.weekStart, 6) || slot.status !== "planned")) {
+        plan.slots.some((slot) => slot.localDate < plan.weekStart || slot.localDate > addDays(plan.weekStart, 6))) {
         throw new Error("The week is incomplete.");
       }
-      const slots: PlanSlotDraft[] = plan.slots.map((slot) => ({
+      const slots: PlanSlotDraft[] = plannedSlots.map((slot) => ({
         id: slot.id, planId: slot.planId, householdId, localDate: slot.localDate,
         mealKind: slot.mealKind as PlanSlotDraft["mealKind"],
         slotType: slot.slotType as PlanSlotDraft["slotType"],
         recipeId: slot.recipeId, servings: slot.servings,
       }));
       const components: ComponentUse[] = [];
-      for (const slot of plan.slots) {
+      for (const slot of plannedSlots) {
         if ((slot.slotType === "cook" || slot.slotType === "transformed_lunch") && slot.components.length === 0) {
           throw new Error("A cooked meal is missing its components.");
         }

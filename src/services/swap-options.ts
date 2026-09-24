@@ -114,6 +114,7 @@ export async function getSwapShortlist(householdId: string, planId: string, slot
   return { plan: { id: plan.id, state: plan.state, revision: plan.revision },
     slot: { id: slot.id, localDate: slot.localDate, title: slot.recipe.title,
       totalMinutes: slot.recipe.totalMinutes, locked: slot.locked },
-    linkedLunch: linkedLunch?.recipe ? { title: linkedLunch.recipe.title, totalMinutes: linkedLunch.recipe.totalMinutes } : null,
+    linkedLunch: linkedLunch?.recipe ? { title: linkedLunch.recipe.title,
+      totalMinutes: linkedLunch.recipe.totalMinutes, locked: linkedLunch.locked } : null,
     options: previews };
 }

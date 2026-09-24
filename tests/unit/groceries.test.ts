@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { aggregateGroceryNeeds, type GroceryComponent } from "../../src/domain/meals/groceries";
-import { parseOnHandAmount, reviewGroceryNeed } from "../../src/domain/meals/grocery-review";
+import { findUnallocatedPurchases, parseOnHandAmount, reviewGroceryNeed } from "../../src/domain/meals/grocery-review";
 
 const components: GroceryComponent[] = [
   {
@@ -58,5 +58,17 @@ describe("grocery needs", () => {
     expect(parseOnHandAmount("1.125")).toBe(1125);
     expect(() => parseOnHandAmount("1.1234")).toThrow(/three decimal/);
     expect(() => parseOnHandAmount("-1")).toThrow(/non-negative/);
+  });
+
+  it("shows previously bought lines that no current meal needs, without losing matching checks", () => {
+    const needs = aggregateGroceryNeeds(components);
+    const lines = [
+      { ingredientId: "chicken", unitGroup: "mass", name: "Chicken", category: "Meat", checked: true },
+      { ingredientId: "tofu", unitGroup: "mass", name: "Tofu", category: "Protein", checked: true },
+      { ingredientId: "lime", unitGroup: "count", name: "Lime", category: "Produce", checked: false },
+    ];
+    expect(findUnallocatedPurchases(needs, lines)).toEqual([
+      { ingredientId: "tofu", unitGroup: "mass", name: "Tofu", category: "Protein" },
+    ]);
   });
 });

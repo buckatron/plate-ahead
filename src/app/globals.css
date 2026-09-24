@@ -85,6 +85,10 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .swap-groceries li b { white-space: nowrap; font-size: 11px; }
 .swap-more { color: #9a512f; }
 .swap-less { color: #397254; }
+.swap-apply { margin-top: 16px; }
+.swap-apply button { width: 100%; border: 0; border-radius: 8px; background: #397254; color: white; padding: 11px 13px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.swap-apply button:hover { background: #2d6046; }
+.swap-apply button:focus-visible { outline: 3px solid #c18043; outline-offset: 3px; }
 .grocery-heading { padding: 40px 0 18px; }
 .grocery-heading h1 { margin-top: 14px; }
 .grocery-note { max-width: 760px; color: #647266; line-height: 1.55; font-size: 14px; margin: 0 0 25px; }
@@ -115,6 +119,14 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .grocery-contributions li span:last-child { white-space: nowrap; }
 .grocery-empty { margin-bottom: 60px; max-width: 650px; }
 .grocery-empty p { color: #647266; line-height: 1.5; font-size: 13px; }
+.grocery-unallocated { margin: 0 0 60px; max-width: 760px; border-color: #ddc8a9; background: #fffaf1; }
+.grocery-unallocated h2 { margin-bottom: 9px; }
+.grocery-unallocated > p { color: #716655; font-size: 13px; line-height: 1.5; margin: 0 0 17px; }
+.grocery-unallocated-category { color: #776b5a; font-size: 11px; font-weight: 400 !important; }
+.grocery-unallocated-action { margin-top: 8px; }
+.grocery-unallocated-action button { border: 1px solid #c7b796; border-radius: 6px; background: #fff4df; color: #694c2d; padding: 6px 9px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.grocery-unallocated-action button:hover { background: #f9e6c9; }
+.grocery-unallocated-action button:focus-visible { outline: 2px solid #397254; outline-offset: 2px; }
 .library-heading { padding: 54px 0 24px; }
 .library-heading h1 { max-width: 720px; }
 .library-count { font-size: 12px; font-weight: 700; color: #66776a; text-transform: uppercase; letter-spacing: .1em; padding: 13px 0; border-top: 1px solid #d8ded4; }

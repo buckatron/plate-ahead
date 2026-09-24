@@ -279,8 +279,8 @@ Acceptance: settings produce one complete plan and a grocery list with correctly
 
 - [x] Rank up to three read-only dinner alternatives against the current week, time limit, and exclusions; show the likely linked-lunch outcome.
 - [x] Preview the linked lunch outcome, dinner/lunch preparation time, and full-week ingredient requirement changes without mutating the plan.
-- [ ] Apply swaps and derived changes atomically with revision checks.
-- [ ] Preserve purchase state and expose unallocated purchased ingredients.
+- [x] Apply dinner swaps and linked-lunch replacement or explicit cancellation atomically with revision checks; preserve plan-specific grocery review rows.
+- [x] Preserve bought checks across swaps and show items no longer needed by the current plan, with an explicit undo action.
 - [ ] Support dinner skip, lunch cancellation, and safe regeneration around locked meals.
 
 Acceptance: replacing a dinner never leaves an orphan lunch, overallocated component, stale grocery requirement, or lost purchase checkmark.

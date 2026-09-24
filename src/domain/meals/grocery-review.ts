@@ -10,6 +10,20 @@ export interface ReviewedGroceryNeed extends GroceryNeed, GroceryReviewState {
   toBuy: Quantity;
 }
 
+export interface UnallocatedPurchasedLine {
+  ingredientId: string;
+  unitGroup: string;
+  name: string;
+  category: string;
+}
+
+export function findUnallocatedPurchases(needs: GroceryNeed[], lines: Array<UnallocatedPurchasedLine & { checked: boolean }>): UnallocatedPurchasedLine[] {
+  const neededKeys = new Set(needs.map((need) => need.key));
+  return lines.filter((line) => line.checked && !neededKeys.has(`${line.ingredientId}:${line.unitGroup}`))
+    .map(({ ingredientId, unitGroup, name, category }) => ({ ingredientId, unitGroup, name, category }))
+    .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name) || a.unitGroup.localeCompare(b.unitGroup));
+}
+
 // A blank field means unknown; zero means the pantry was checked and none is on hand.
 export function parseOnHandAmount(raw: string): number | null {
   const value = raw.trim();
