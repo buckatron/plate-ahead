@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { saveOnHandAction, setPurchasedAction } from "@/app/groceries/actions";
 import { SiteHeader } from "@/components/site-header";
-import { formatQuantity } from "@/domain/meals/scale-recipe";
+import { formatGroceryQuantity, ingredientCountNoun } from "@/domain/meals/grocery-display";
 import type { ReviewedGroceryNeed } from "@/domain/meals/grocery-review";
 import { findActivePlanReference, findLatestPlan } from "@/repositories/plans";
 import { getGroceryNeeds } from "@/services/grocery-needs";
@@ -52,15 +52,16 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                 <input type="hidden" name="unitGroup" value={unitGroup} />
               </>;
               return <li key={line.key} id={`line-${line.ingredientId}-${unitGroup}`}>
-              <div className={`grocery-line-top${line.checked ? " grocery-bought" : ""}`}><strong>{line.name}</strong><span>{formatQuantity(line.quantity)} needed</span></div>
-              <div className="grocery-line-status"><span>{line.onHandMilli === null ? "On hand: not reviewed" : `On hand: ${line.onHandMilli / 1000} ${line.quantity.unit}`}</span>
-                <strong>{line.toBuy.milli > 0 ? `${formatQuantity(line.toBuy)} ${line.checked ? "marked bought" : "to buy"}${line.onHandMilli === null ? " (before pantry review)" : ""}` : "Enough on hand"}</strong></div>
+              <div className={`grocery-line-top${line.checked ? " grocery-bought" : ""}`}><strong>{line.name}</strong><span>{formatGroceryQuantity(line.quantity, line.ingredientId, line.name)} needed</span></div>
+              <div className="grocery-line-status"><span>{line.onHandMilli === null ? "On hand: not reviewed" :
+                `On hand: ${formatGroceryQuantity({ milli: line.onHandMilli, unit: line.quantity.unit }, line.ingredientId, line.name)}`}</span>
+                <strong>{line.toBuy.milli > 0 ? `${formatGroceryQuantity(line.toBuy, line.ingredientId, line.name)} ${line.checked ? "marked bought" : "to buy"}${line.onHandMilli === null ? " (before pantry review)" : ""}` : "Enough on hand"}</strong></div>
               <div className="grocery-controls">
                 <form action={saveOnHandAction} className="grocery-onhand-form">
                   {fields}
                   <label htmlFor={`onhand-${line.key}`}>Have</label>
-                  <input id={`onhand-${line.key}`} type="number" name="onHand" min="0" step="0.001" inputMode="decimal" defaultValue={line.onHandMilli === null ? "" : String(line.onHandMilli / 1000)} aria-label={`${line.name} on hand in ${line.quantity.unit}`} />
-                  <span>{line.quantity.unit}</span><button type="submit">Save</button>
+                  <input id={`onhand-${line.key}`} type="number" name="onHand" min="0" step="0.001" inputMode="decimal" defaultValue={line.onHandMilli === null ? "" : String(line.onHandMilli / 1000)} aria-label={line.quantity.unit === "each" ? `How many ${ingredientCountNoun(line.ingredientId, line.name)} do you have?` : `${line.name} on hand in ${line.quantity.unit}`} />
+                  <span>{line.quantity.unit === "each" ? ingredientCountNoun(line.ingredientId, line.name) : line.quantity.unit}</span><button type="submit">Save</button>
                 </form>
                 {(line.toBuy.milli > 0 || line.checked) && <form action={setPurchasedAction}>
                   {fields}<input type="hidden" name="checked" value={line.checked ? "0" : "1"} />
@@ -70,7 +71,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
               <details><summary>Used by {line.contributions.length} {line.contributions.length === 1 ? "meal" : "meals"}</summary>
                 <ul className="grocery-contributions">{line.contributions.map((source) => <li key={source.slotId}>
                   <span>{source.localDate} · {source.mealKind} · {source.recipeTitle}</span>
-                  <span>{formatQuantity(source.quantity)}</span>
+                  <span>{formatGroceryQuantity(source.quantity, line.ingredientId, line.name)}</span>
                 </li>)}</ul>
               </details>
             </li>})}</ul>
@@ -81,7 +82,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
           <p>These items were marked bought for an earlier version of this plan, but no current meal uses them. The check is preserved; purchase quantities were not recorded.</p>
           <ul className="grocery-lines">{result.unallocatedPurchased.map((line) => <li key={`${line.ingredientId}:${line.unitGroup}`}
             id={`line-${line.ingredientId}-${line.unitGroup}`}>
-            <div className="grocery-line-top"><strong>{line.name}</strong><span className="grocery-unallocated-category">{line.category} · {line.unitGroup}</span></div>
+            <div className="grocery-line-top"><strong>{line.name}</strong><span className="grocery-unallocated-category">{line.category} · {line.unitGroup === "count" ? ingredientCountNoun(line.ingredientId, line.name) : line.unitGroup}</span></div>
             <form action={setPurchasedAction} className="grocery-unallocated-action">
               <input type="hidden" name="planId" value={result.plan.id} />
               <input type="hidden" name="expectedRevision" value={result.plan.revision} />

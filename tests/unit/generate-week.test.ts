@@ -43,4 +43,29 @@ describe("week generation", () => {
     expect(nextPlanningMonday(new Date("2026-09-28T02:00:00Z"), "America/Los_Angeles")).toBe("2026-09-28");
     expect(nextPlanningMonday(new Date("2026-09-28T18:00:00Z"), "America/Los_Angeles")).toBe("2026-09-28");
   });
+
+  it("keeps a dinner on its date with the same transformed lunch in another draft", () => {
+    const input = { weekStart: "2026-09-28", settings: DEFAULT_SETTINGS, candidates };
+    const first = generateWeek(input);
+    const kept = first.dinners.find((dinner) => dinner.lunch)!;
+    const next = generateWeek({ ...input, generationIndex: 1,
+      recentKeys: first.dinners.map((dinner) => dinner.recipe.key),
+      lockedDinners: [{ date: kept.date, recipe: kept.recipe, lunch: kept.lunch }] });
+    const sameDay = next.dinners.find((dinner) => dinner.date === kept.date)!;
+    expect(sameDay).toMatchObject({ recipe: { id: kept.recipe.id }, lunch: { transformationId: kept.lunch!.transformationId }, locked: true });
+    expect(next.dinners.filter((dinner) => dinner.lunch)).toHaveLength(DEFAULT_SETTINGS.lunchCount);
+    expect(new Set(next.dinners.map((dinner) => dinner.recipe.key)).size).toBe(DEFAULT_SETTINGS.dinnerCount);
+  });
+
+  it("explains settings that conflict with a kept dinner", () => {
+    const kept = generateWeek({ weekStart: "2026-09-28", settings: DEFAULT_SETTINGS, candidates }).dinners[5];
+    expect(() => generateWeek({ weekStart: "2026-09-28", settings: { ...DEFAULT_SETTINGS, dinnerCount: 5 },
+      candidates, lockedDinners: [{ date: kept.date, recipe: kept.recipe }] })).toThrow(/no longer fits the number of cooking nights/);
+    expect(() => generateWeek({ weekStart: "2026-09-28", settings: { ...DEFAULT_SETTINGS, maxDinnerMinutes: 10 },
+      candidates, lockedDinners: [{ date: kept.date, recipe: kept.recipe }] })).toThrow(/Kept dinner/);
+    const first = generateWeek({ weekStart: "2026-09-28", settings: DEFAULT_SETTINGS, candidates });
+    expect(() => generateWeek({ weekStart: "2026-09-28", settings: DEFAULT_SETTINGS, candidates,
+      lockedDinners: first.dinners.map((dinner) => ({ date: dinner.date, recipe: dinner.recipe })) }))
+      .toThrow(/Unlock one or lower the lunch target/);
+  });
 });

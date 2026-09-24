@@ -267,7 +267,7 @@ Acceptance: the catalog supports a manually assembled week for two, including co
 - [x] Add editable weekly settings for the existing household; changes apply to newly generated drafts.
 - [x] Implement deterministic week generation with variety, overlap, and time constraints.
 - [x] Persist generated drafts and accept a reviewed draft with a revision check; archive the previous active plan for that week.
-- [ ] Add per-meal locks and revision-aware edits to accepted plans.
+- [x] Add per-dinner locks and revision-aware edits to draft and accepted plans.
 - [x] Build the weekly view with dinners, night out/flexible slots, linked lunches, and concise recommendation reasons.
 - [x] Aggregate grocery needs from scaled planned components and lunch additions; group by category with per-meal contributions.
 - [x] Add plan-specific on-hand review and persistent bought checks to the grocery list.
@@ -281,7 +281,8 @@ Acceptance: settings produce one complete plan and a grocery list with correctly
 - [x] Preview the linked lunch outcome, dinner/lunch preparation time, and full-week ingredient requirement changes without mutating the plan.
 - [x] Apply dinner swaps and linked-lunch replacement or explicit cancellation atomically with revision checks; preserve plan-specific grocery review rows.
 - [x] Preserve bought checks across swaps and show items no longer needed by the current plan, with an explicit undo action.
-- [ ] Support dinner skip, lunch cancellation, and safe regeneration around locked meals.
+- [x] Regenerate safely around locked dinners and their linked lunches, with actionable settings conflicts.
+- [ ] Support deliberate dinner skip and standalone lunch cancellation.
 
 Acceptance: replacing a dinner never leaves an orphan lunch, overallocated component, stale grocery requirement, or lost purchase checkmark.
 
