@@ -75,6 +75,16 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .swap-notice { border-left: 3px solid #c18043; padding: 10px 13px; background: #f3eee2; }
 .swap-lunch-note { margin: 22px 0 0; }
 .swap-grid { margin-top: 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.swap-time { margin: 0 0 12px !important; font-size: 12px !important; }
+.swap-lunch-time { display: block; margin-top: 7px; }
+.swap-groceries { margin-top: 16px; font-size: 12px; }
+.swap-groceries summary { color: #397254; cursor: pointer; font-weight: 700; }
+.swap-groceries ul { list-style: none; margin: 9px 0 0; padding: 0; }
+.swap-groceries li { display: flex; justify-content: space-between; gap: 9px; border-top: 1px solid #e6eae3; padding: 7px 0; }
+.swap-groceries li small { display: block; color: #78877b; margin-top: 3px; }
+.swap-groceries li b { white-space: nowrap; font-size: 11px; }
+.swap-more { color: #9a512f; }
+.swap-less { color: #397254; }
 .grocery-heading { padding: 40px 0 18px; }
 .grocery-heading h1 { margin-top: 14px; }
 .grocery-note { max-width: 760px; color: #647266; line-height: 1.55; font-size: 14px; margin: 0 0 25px; }

@@ -278,7 +278,7 @@ Acceptance: settings produce one complete plan and a grocery list with correctly
 ### Phase 4: Swapping and plan repair
 
 - [x] Rank up to three read-only dinner alternatives against the current week, time limit, and exclusions; show the likely linked-lunch outcome.
-- [ ] Preview affected lunches, ingredient changes, and preparation time.
+- [x] Preview the linked lunch outcome, dinner/lunch preparation time, and full-week ingredient requirement changes without mutating the plan.
 - [ ] Apply swaps and derived changes atomically with revision checks.
 - [ ] Preserve purchase state and expose unallocated purchased ingredients.
 - [ ] Support dinner skip, lunch cancellation, and safe regeneration around locked meals.
