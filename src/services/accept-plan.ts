@@ -30,7 +30,8 @@ export async function acceptPlan(householdId: string, planId: string, expectedRe
       const dinners = plan.slots.filter((slot) => slot.mealKind === "dinner");
       const lunches = plan.slots.filter((slot) => slot.mealKind === "lunch");
       const plannedSlots = plannedSlotsForAcceptance(plan.slots);
-      if (dinners.length !== 7 || dinners.filter((slot) => slot.slotType === "cook").length !== settings.dinnerCount ||
+      if (dinners.length !== 7 || dinners.filter((slot) => slot.slotType === "cook" && slot.status === "planned").length +
+        dinners.filter((slot) => slot.status === "skipped").length !== settings.dinnerCount ||
         dinners.filter((slot) => slot.slotType === "eat_out").length !== 1 ||
         lunches.length !== settings.lunchCount || lunches.some((slot) => slot.slotType !== "transformed_lunch") ||
         dinners.some((slot) => !["cook", "eat_out", "flexible"].includes(slot.slotType)) ||

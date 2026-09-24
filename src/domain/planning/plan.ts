@@ -17,10 +17,12 @@ const slotSchema = z.object({
 export type PlanSlotDraft = z.infer<typeof slotSchema>;
 
 export function plannedSlotsForAcceptance<T extends { mealKind: string; status: string;
-  recipeId: string | null; servings: number | null; components: readonly unknown[] }>(slots: T[]): T[] {
+  slotType: string; recipeId: string | null; servings: number | null; components: readonly unknown[] }>(slots: T[]): T[] {
   return slots.filter((slot) => {
     if (slot.status === "planned") return true;
     if (slot.mealKind === "lunch" && slot.status === "cancelled" &&
+      slot.slotType === "transformed_lunch" && slot.recipeId === null && slot.servings === null && slot.components.length === 0) return false;
+    if (slot.mealKind === "dinner" && slot.status === "skipped" && slot.slotType === "flexible" &&
       slot.recipeId === null && slot.servings === null && slot.components.length === 0) return false;
     throw new Error("A meal has an unresolved status or incomplete cancellation.");
   });

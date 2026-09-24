@@ -78,11 +78,19 @@ describe("planning contracts", () => {
   });
 
   it("accepts only an explicit, empty cancelled lunch as a resolved slot", () => {
-    const planned = { mealKind: "dinner", status: "planned", recipeId: "dinner-v1", servings: 2, components: [{}] };
-    const cancelled = { mealKind: "lunch", status: "cancelled", recipeId: null, servings: null, components: [] };
+    const planned = { mealKind: "dinner", slotType: "cook", status: "planned", recipeId: "dinner-v1", servings: 2, components: [{}] };
+    const cancelled = { mealKind: "lunch", slotType: "transformed_lunch", status: "cancelled", recipeId: null, servings: null, components: [] };
     expect(plannedSlotsForAcceptance([planned, cancelled])).toEqual([planned]);
     expect(() => plannedSlotsForAcceptance([{ ...cancelled, recipeId: "lunch-v1" }])).toThrow(/incomplete cancellation/);
     expect(() => plannedSlotsForAcceptance([{ ...cancelled, mealKind: "dinner" }])).toThrow(/incomplete cancellation/);
     expect(() => plannedSlotsForAcceptance([{ ...cancelled, components: [{}] }])).toThrow(/incomplete cancellation/);
+  });
+
+  it("accepts only an empty skipped dinner as a resolved slot", () => {
+    const skipped = { mealKind: "dinner", slotType: "flexible", status: "skipped", recipeId: null, servings: null, components: [] };
+    expect(plannedSlotsForAcceptance([skipped])).toEqual([]);
+    expect(() => plannedSlotsForAcceptance([{ ...skipped, recipeId: "dinner-v1" }])).toThrow(/incomplete cancellation/);
+    expect(() => plannedSlotsForAcceptance([{ ...skipped, components: [{}] }])).toThrow(/incomplete cancellation/);
+    expect(() => plannedSlotsForAcceptance([{ ...skipped, slotType: "cook" }])).toThrow(/incomplete cancellation/);
   });
 });

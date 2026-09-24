@@ -73,6 +73,11 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .lock-form button { border: 1px solid #b9cbb9; border-radius: 6px; background: #eef3eb; color: #28553c; padding: 5px 8px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
 .lock-form button:hover { background: #dfeadd; }
 .lock-form button:focus-visible { outline: 2px solid #397254; outline-offset: 2px; }
+.meal-repair { margin-top: 9px; color: #775d42; font-size: 11px; }
+.meal-repair summary { width: max-content; cursor: pointer; }
+.meal-repair p { max-width: 330px; margin: 7px 0 !important; color: #775d42 !important; }
+.meal-repair button { border: 1px solid #c7b796; border-radius: 6px; background: #fff4df; color: #694c2d; padding: 6px 9px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.meal-repair button:focus-visible, .meal-repair summary:focus-visible { outline: 2px solid #397254; outline-offset: 2px; }
 .swap-heading { padding: 45px 0 25px; }
 .swap-heading h1 { margin-top: 14px; }
 .swap-notice, .swap-lunch-note { max-width: 760px; color: #647266; line-height: 1.55; font-size: 13px; }

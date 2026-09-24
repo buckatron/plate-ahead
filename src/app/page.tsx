@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { acceptPlanAction, generateWeekAction, setDinnerLockedAction } from "@/app/actions";
+import { acceptPlanAction, generateWeekAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
 import { findHousehold } from "@/repositories/households";
 import { findActivePlanReference, findLatestPlan, findPlanById } from "@/repositories/plans";
 import { SiteHeader } from "@/components/site-header";
@@ -8,9 +8,9 @@ import { SettingsForm } from "@/components/settings-form";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ planningError?: string; acceptError?: string;
-  swapError?: string; swapSaved?: string; lockError?: string; planId?: string }> }) {
+  swapError?: string; swapSaved?: string; lockError?: string; repairError?: string; repairSaved?: string; planId?: string }> }) {
   const household = await findHousehold("home");
-  const { planningError, acceptError, swapError, swapSaved, lockError, planId } = await searchParams;
+  const { planningError, acceptError, swapError, swapSaved, lockError, repairError, repairSaved, planId } = await searchParams;
   const latestPlan = household ? await findLatestPlan(household.id) : null;
   const plan = household && planId ? await findPlanById(household.id, planId) ?? latestPlan : latestPlan;
   const activePlan = household && plan ? await findActivePlanReference(household.id, plan.weekStart) : null;
@@ -47,6 +47,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {acceptError && <p className="plan-error" role="alert">{acceptError}</p>}
             {swapError && <p className="plan-error" role="alert">{swapError}</p>}
             {lockError && <p className="plan-error" role="alert">{lockError}</p>}
+            {repairError && <p className="plan-error" role="alert">{repairError}</p>}
+            {repairSaved && <p className="settings-message settings-saved" role="status">{repairSaved === "skip-dinner"
+              ? "Dinner skipped and its linked lunch cancelled. Grocery needs were recalculated."
+              : repairSaved === "skip-dinner-only" ? "Dinner skipped. Grocery needs were recalculated."
+                : "Lunch cancelled; dinner portions and grocery needs were recalculated."}</p>}
             {swapSaved && <p className="settings-message settings-saved" role="status">{swapSaved === "lunch-cancelled"
               ? "Dinner swapped. Its linked lunch was cancelled; grocery needs were recalculated."
               : "Dinner and linked lunch updated. Grocery needs were recalculated."}</p>}
@@ -78,11 +83,23 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     <span className="meal-label">{slot.mealKind === "dinner" ? "Dinner" : "Lunch"}</span>
                     <div>
                       {slot.status === "cancelled" ? <strong>Lunch cancelled</strong> :
+                        slot.status === "skipped" ? <strong>Dinner skipped</strong> :
                         slot.recipe ? <Link href={`/recipes/${slot.recipe.recipeKey}`}>{slot.recipe.title}</Link> :
                         <strong>{slot.slotType === "eat_out" ? "Eat out" : "Flexible night"}</strong>}
                       {slot.reason && <p>{slot.reason}</p>}
                       {slot.mealKind === "lunch" && slot.status === "planned" &&
                         <p>From {slot.incomingAllocations[0]?.sourceComponent.slot.recipe?.title ?? "a previous dinner"}.</p>}
+                      {slot.mealKind === "lunch" && slot.status === "planned" && plan.state !== "archived" &&
+                        <details className="meal-repair"><summary>Cancel this lunch</summary>
+                          <p>The dinner will no longer reserve extra portions for it.</p>
+                          <form action={repairPlanAction}>
+                            <input type="hidden" name="planId" value={plan.id} />
+                            <input type="hidden" name="slotId" value={slot.id} />
+                            <input type="hidden" name="expectedRevision" value={plan.revision} />
+                            <input type="hidden" name="change" value="cancel-lunch" />
+                            <button type="submit">Confirm lunch cancellation</button>
+                          </form>
+                        </details>}
                       {slot.mealKind === "dinner" && slot.slotType === "cook" && slot.status === "planned" && plan.state !== "archived" && <>
                         <form action={setDinnerLockedAction} className="lock-form">
                           <input type="hidden" name="planId" value={plan.id} />
@@ -94,6 +111,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                           </button>
                         </form>
                         {!slot.locked && <Link className="swap-link" href={`/swap?planId=${plan.id}&slotId=${slot.id}`}>See alternatives →</Link>}
+                        <details className="meal-repair"><summary>Skip this dinner</summary>
+                          <p>This opens the night, cancels its linked lunch, and updates groceries.</p>
+                          <form action={repairPlanAction}>
+                            <input type="hidden" name="planId" value={plan.id} />
+                            <input type="hidden" name="slotId" value={slot.id} />
+                            <input type="hidden" name="expectedRevision" value={plan.revision} />
+                            <input type="hidden" name="change" value="skip-dinner" />
+                            <button type="submit">Confirm dinner skip</button>
+                          </form>
+                        </details>
                       </>}
                     </div>
                   </div>)}

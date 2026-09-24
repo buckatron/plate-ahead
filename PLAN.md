@@ -282,7 +282,7 @@ Acceptance: settings produce one complete plan and a grocery list with correctly
 - [x] Apply dinner swaps and linked-lunch replacement or explicit cancellation atomically with revision checks; preserve plan-specific grocery review rows.
 - [x] Preserve bought checks across swaps and show items no longer needed by the current plan, with an explicit undo action.
 - [x] Regenerate safely around locked dinners and their linked lunches, with actionable settings conflicts.
-- [ ] Support deliberate dinner skip and standalone lunch cancellation.
+- [x] Support deliberate dinner skip and standalone lunch cancellation.
 
 Acceptance: replacing a dinner never leaves an orphan lunch, overallocated component, stale grocery requirement, or lost purchase checkmark.
 

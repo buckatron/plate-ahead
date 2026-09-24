@@ -9,6 +9,7 @@ import { parseHouseholdSettingsForm } from "@/schemas/household";
 import { createGeneratedWeek } from "@/services/plan-week";
 import { acceptPlan, PlanAcceptanceError } from "@/services/accept-plan";
 import { PlanLockError, setDinnerLocked } from "@/services/plan-lock";
+import { PlanRepairError, repairPlan } from "@/services/repair-plan";
 
 export type SettingsActionState = { status: "idle" | "saved" | "error"; message: string };
 
@@ -59,6 +60,25 @@ export async function setDinnerLockedAction(formData: FormData) {
   }
   const params = new URLSearchParams({ planId: input.data.planId });
   if (error) params.set("lockError", error);
+  redirect(`/?${params}#slot-${input.data.slotId}`);
+}
+
+export async function repairPlanAction(formData: FormData) {
+  const input = z.object({ planId: z.uuid(), slotId: z.uuid(), expectedRevision: z.coerce.number().int().positive(),
+    change: z.enum(["skip-dinner", "cancel-lunch"]) }).safeParse(Object.fromEntries(formData));
+  if (!input.success) redirect("/?repairError=Refresh%20the%20week%20and%20try%20again.");
+  let error: string | null = null;
+  let linkedLunchCancelled = false;
+  try {
+    linkedLunchCancelled = (await repairPlan({ householdId: "home", ...input.data })).linkedLunchCancelled;
+    revalidatePath("/");
+    revalidatePath("/groceries");
+  } catch (cause) {
+    error = cause instanceof PlanRepairError ? cause.message : "Could not change this meal. Please try again.";
+  }
+  const params = new URLSearchParams({ planId: input.data.planId });
+  params.set(error ? "repairError" : "repairSaved", error ?? (input.data.change === "skip-dinner" && !linkedLunchCancelled
+    ? "skip-dinner-only" : input.data.change));
   redirect(`/?${params}#slot-${input.data.slotId}`);
 }
 
