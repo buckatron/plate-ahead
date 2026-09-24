@@ -24,6 +24,9 @@ export async function acceptPlan(householdId: string, planId: string, expectedRe
     if (plan.state !== "draft" || plan.revision !== expectedRevision) {
       throw new PlanAcceptanceError("This draft changed in another tab. Refresh before accepting it.");
     }
+    const cookedActive = await tx.mealPlan.findFirst({ where: { householdId, weekStart: plan.weekStart,
+      state: "active", slots: { some: { cookingEvent: { isNot: null } } } }, select: { id: true } });
+    if (cookedActive) throw new PlanAcceptanceError("This week already has cooked dinners. Keep the accepted plan so its cooking history stays attached.");
 
     try {
       const settings = householdSettingsSchema.parse(JSON.parse(plan.settingsJson) as unknown);

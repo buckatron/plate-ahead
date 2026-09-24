@@ -18,6 +18,7 @@ model Household {
   ingredients HouseholdIngredient[]
   plans       MealPlan[]
   groceryLists GroceryList[]
+  cookingEvents CookingEvent[]
 }
 
 model HouseholdPreferences {
@@ -75,6 +76,7 @@ model Recipe {
   components       RecipeComponent[]
   steps            RecipeStep[]
   slots            PlanSlot[]
+  cookingEvents    CookingEvent[]
   @@unique([recipeKey, version])
 }
 
@@ -102,6 +104,7 @@ model RecipeComponent {
   planned             PlannedComponent[]
   sourceTransformations Transformation[]
   transformationInputs TransformationInput[]
+  leftoverBatches LeftoverBatch[]
 }
 
 model RecipeIngredient {
@@ -181,6 +184,7 @@ model PlanSlot {
   recipe           Recipe? @relation(fields: [recipeId], references: [id], onDelete: Restrict)
   components       PlannedComponent[]
   incomingAllocations ComponentAllocation[]
+  cookingEvent CookingEvent?
   @@unique([planId, localDate, mealKind])
 }
 
@@ -210,6 +214,34 @@ model ComponentAllocation {
   destinationSlot    PlanSlot @relation(fields: [destinationSlotId], references: [id], onDelete: Cascade)
   transformation     Transformation @relation(fields: [transformationId], references: [id])
   @@index([destinationSlotId])
+}
+
+model CookingEvent {
+  id             String @id @default(cuid())
+  householdId    String
+  slotId         String @unique
+  recipeId       String
+  requestId      String
+  servingsServed Int
+  cookedAt       DateTime @default(now())
+  household      Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  slot           PlanSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  recipe         Recipe @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  batches        LeftoverBatch[]
+  @@unique([householdId, requestId])
+}
+
+model LeftoverBatch {
+  id                String @id @default(cuid())
+  cookingEventId    String
+  recipeComponentId String
+  quantityMilli     Int
+  unit              String
+  location          String @default("fridge")
+  storedAt          DateTime @default(now())
+  cookingEvent      CookingEvent @relation(fields: [cookingEventId], references: [id], onDelete: Cascade)
+  recipeComponent   RecipeComponent @relation(fields: [recipeComponentId], references: [id], onDelete: Restrict)
+  @@unique([cookingEventId, recipeComponentId])
 }
 
 model GroceryList {

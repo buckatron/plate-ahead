@@ -7,6 +7,8 @@ const planInclude = {
   // Within a day, descending meal kind puts lunch before dinner.
   slots: { orderBy: [{ localDate: "asc" }, { mealKind: "desc" }], include: {
     recipe: true,
+    components: { include: { recipeComponent: true, outgoingAllocations: true } },
+    cookingEvent: { include: { batches: { include: { recipeComponent: true } } } },
     incomingAllocations: { include: { sourceComponent: { include: { slot: { include: { recipe: true } } } } } },
   } },
 } satisfies Prisma.MealPlanInclude;

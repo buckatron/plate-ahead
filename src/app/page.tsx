@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { acceptPlanAction, generateWeekAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
+import { randomUUID } from "node:crypto";
+import { acceptPlanAction, generateWeekAction, recordCookingAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
+import { formatQuantity } from "@/domain/meals/scale-recipe";
 import { findHousehold } from "@/repositories/households";
 import { findActivePlanReference, findLatestPlan, findPlanById } from "@/repositories/plans";
 import { SiteHeader } from "@/components/site-header";
@@ -8,9 +10,11 @@ import { SettingsForm } from "@/components/settings-form";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ planningError?: string; acceptError?: string;
-  swapError?: string; swapSaved?: string; lockError?: string; repairError?: string; repairSaved?: string; planId?: string }> }) {
+  swapError?: string; swapSaved?: string; lockError?: string; repairError?: string; repairSaved?: string;
+  cookingError?: string; cookingSaved?: string; planId?: string }> }) {
   const household = await findHousehold("home");
-  const { planningError, acceptError, swapError, swapSaved, lockError, repairError, repairSaved, planId } = await searchParams;
+  const { planningError, acceptError, swapError, swapSaved, lockError, repairError, repairSaved,
+    cookingError, cookingSaved, planId } = await searchParams;
   const latestPlan = household ? await findLatestPlan(household.id) : null;
   const plan = household && planId ? await findPlanById(household.id, planId) ?? latestPlan : latestPlan;
   const activePlan = household && plan ? await findActivePlanReference(household.id, plan.weekStart) : null;
@@ -48,9 +52,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {swapError && <p className="plan-error" role="alert">{swapError}</p>}
             {lockError && <p className="plan-error" role="alert">{lockError}</p>}
             {repairError && <p className="plan-error" role="alert">{repairError}</p>}
+            {cookingError && <p className="plan-error" role="alert">{cookingError}</p>}
+            {cookingSaved && <p className="settings-message settings-saved" role="status">{cookingSaved === "shortfall"
+              ? "Dinner recorded. A linked lunch needs attention because less food was saved than planned."
+              : "Dinner and confirmed leftovers recorded."}</p>}
             {repairSaved && <p className="settings-message settings-saved" role="status">{repairSaved === "skip-dinner"
               ? "Dinner skipped and its linked lunch cancelled. Grocery needs were recalculated."
               : repairSaved === "skip-dinner-only" ? "Dinner skipped. Grocery needs were recalculated."
+                : repairSaved === "cancel-lunch-cooked" ? "Lunch cancelled. Confirmed leftovers remain recorded."
                 : "Lunch cancelled; dinner portions and grocery needs were recalculated."}</p>}
             {swapSaved && <p className="settings-message settings-saved" role="status">{swapSaved === "lunch-cancelled"
               ? "Dinner swapped. Its linked lunch was cancelled; grocery needs were recalculated."
@@ -87,9 +96,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                         slot.recipe ? <Link href={`/recipes/${slot.recipe.recipeKey}`}>{slot.recipe.title}</Link> :
                         <strong>{slot.slotType === "eat_out" ? "Eat out" : "Flexible night"}</strong>}
                       {slot.reason && <p>{slot.reason}</p>}
-                      {slot.mealKind === "lunch" && slot.status === "planned" &&
+                      {slot.status === "needs_attention" && <p className="meal-warning" role="status">Lunch needs attention: supply the missing food separately or cancel it.</p>}
+                      {slot.mealKind === "lunch" && ["planned", "needs_attention"].includes(slot.status) &&
                         <p>From {slot.incomingAllocations[0]?.sourceComponent.slot.recipe?.title ?? "a previous dinner"}.</p>}
-                      {slot.mealKind === "lunch" && slot.status === "planned" && plan.state !== "archived" &&
+                      {slot.mealKind === "lunch" && ["planned", "needs_attention"].includes(slot.status) && plan.state !== "archived" &&
                         <details className="meal-repair"><summary>Cancel this lunch</summary>
                           <p>The dinner will no longer reserve extra portions for it.</p>
                           <form action={repairPlanAction}>
@@ -122,6 +132,26 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                           </form>
                         </details>
                       </>}
+                      {slot.mealKind === "dinner" && slot.slotType === "cook" && slot.status === "planned" && plan.state === "active" &&
+                        <details className="meal-repair cooking-checkin"><summary>Mark dinner cooked</summary>
+                          <p>Confirm what you served and what you actually saved. Planned lunch portions are suggestions, not recorded leftovers.</p>
+                          <form action={recordCookingAction}>
+                            <input type="hidden" name="planId" value={plan.id} />
+                            <input type="hidden" name="slotId" value={slot.id} />
+                            <input type="hidden" name="expectedRevision" value={plan.revision} />
+                            <input type="hidden" name="requestId" value={randomUUID()} />
+                            <label>Servings eaten <input type="number" name="servingsServed" min="1" max="99" step="1" required defaultValue={slot.servings ?? 2} /></label>
+                            {slot.components.filter((component) => component.recipeComponent.reservable).map((component) =>
+                              <label key={component.id}>{component.recipeComponent.name} saved ({component.unit})
+                                <input type="number" name={`amount:${component.recipeComponentId}`} min="0" step="0.001" required
+                                  defaultValue={component.outgoingAllocations.reduce((sum, allocation) => sum + allocation.reservedMilli, 0) / 1000} />
+                              </label>)}
+                            <button type="submit">Confirm cooked dinner</button>
+                          </form>
+                        </details>}
+                      {slot.cookingEvent && <p className="cooked-summary">Cooked · {slot.cookingEvent.servingsServed} servings eaten.
+                        {slot.cookingEvent.batches.length ? ` Saved ${slot.cookingEvent.batches.map((batch) =>
+                          `${formatQuantity({ milli: batch.quantityMilli, unit: batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} ${batch.recipeComponent.name}`).join(", ")}.` : " No reusable food saved."}</p>}
                     </div>
                   </div>)}
                 </section>)}
