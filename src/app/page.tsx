@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
-import { acceptPlanAction, consumeLunchAction, generateWeekAction, recordCookingAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
+import { acceptPlanAction, consumeLunchAction, generateWeekAction, manageLeftoversAction, recordCookingAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
 import { formatQuantity } from "@/domain/meals/scale-recipe";
 import { remainingBatchQuantity } from "@/domain/meals/leftover-stock";
 import { findHousehold } from "@/repositories/households";
@@ -12,10 +12,11 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ planningError?: string; acceptError?: string;
   swapError?: string; swapSaved?: string; lockError?: string; repairError?: string; repairSaved?: string;
-  cookingError?: string; cookingSaved?: string; lunchError?: string; lunchSaved?: string; planId?: string }> }) {
+  cookingError?: string; cookingSaved?: string; lunchError?: string; lunchSaved?: string;
+  batchError?: string; batchSaved?: string; planId?: string }> }) {
   const household = await findHousehold("home");
   const { planningError, acceptError, swapError, swapSaved, lockError, repairError, repairSaved,
-    cookingError, cookingSaved, lunchError, lunchSaved, planId } = await searchParams;
+    cookingError, cookingSaved, lunchError, lunchSaved, batchError, batchSaved, planId } = await searchParams;
   const latestPlan = household ? await findLatestPlan(household.id) : null;
   const plan = household && planId ? await findPlanById(household.id, planId) ?? latestPlan : latestPlan;
   const activePlan = household && plan ? await findActivePlanReference(household.id, plan.weekStart) : null;
@@ -55,6 +56,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {repairError && <p className="plan-error" role="alert">{repairError}</p>}
             {cookingError && <p className="plan-error" role="alert">{cookingError}</p>}
             {lunchError && <p className="plan-error" role="alert">{lunchError}</p>}
+            {batchError && <p className="plan-error" role="alert">{batchError}</p>}
+            {batchSaved && <p className="settings-message settings-saved" role="status">{batchSaved === "discard"
+              ? "Discarded amount recorded. Remaining stock and linked lunches were updated."
+              : batchSaved === "freeze" ? "Batch marked frozen." : "Batch marked thawed and stored in the fridge."}</p>}
             {lunchSaved && <p className="settings-message settings-saved" role="status">Lunch recorded. Its reserved food was deducted from the confirmed batch.</p>}
             {cookingSaved && <p className="settings-message settings-saved" role="status">{cookingSaved === "shortfall"
               ? "Dinner recorded. A linked lunch needs attention because less food was saved than planned."
@@ -165,9 +170,42 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             <button type="submit">Confirm cooked dinner</button>
                           </form>
                         </details>}
-                      {slot.cookingEvent && <p className="cooked-summary">Cooked · {slot.cookingEvent.servingsServed} servings eaten.
-                        {slot.cookingEvent.batches.length ? ` Saved ${slot.cookingEvent.batches.map((batch) =>
-                          `${formatQuantity({ milli: batch.quantityMilli, unit: batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} ${batch.recipeComponent.name} (${formatQuantity({ milli: remainingBatchQuantity(batch.quantityMilli, batch.movements), unit: batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} remaining)`).join(", ")}.` : " No reusable food saved."}</p>}
+                      {slot.cookingEvent && <>
+                        <p className="cooked-summary">Cooked · {slot.cookingEvent.servingsServed} servings eaten.
+                          {!slot.cookingEvent.batches.length && " No reusable food saved."}</p>
+                        {slot.cookingEvent.batches.map((batch) => {
+                          const unit = batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion";
+                          const remaining = remainingBatchQuantity(batch.quantityMilli, batch.movements);
+                          return <div className="batch-card" key={batch.id}>
+                            <p><strong>{batch.recipeComponent.name}</strong> · {formatQuantity({ milli: remaining, unit })} remaining
+                              {remaining > 0 && ` · in ${batch.location === "freezer" ? "freezer" : "fridge"}`}</p>
+                            {remaining > 0 && plan.state !== "draft" && <div className="batch-actions">
+                              <form action={manageLeftoversAction}>
+                                <input type="hidden" name="planId" value={plan.id} />
+                                <input type="hidden" name="slotId" value={slot.id} />
+                                <input type="hidden" name="batchId" value={batch.id} />
+                                <input type="hidden" name="expectedRevision" value={plan.revision} />
+                                <input type="hidden" name="requestId" value={randomUUID()} />
+                                <input type="hidden" name="change" value={batch.location === "freezer" ? "thaw" : "freeze"} />
+                                <button type="submit">{batch.location === "freezer" ? "Mark thawed (in fridge)" : "Mark frozen"}</button>
+                              </form>
+                              <details><summary>Discard some or all</summary>
+                                <form action={manageLeftoversAction}>
+                                  <input type="hidden" name="planId" value={plan.id} />
+                                  <input type="hidden" name="slotId" value={slot.id} />
+                                  <input type="hidden" name="batchId" value={batch.id} />
+                                  <input type="hidden" name="expectedRevision" value={plan.revision} />
+                                  <input type="hidden" name="requestId" value={randomUUID()} />
+                                  <input type="hidden" name="change" value="discard" />
+                                  <label>Amount ({unit}) <input type="number" name="rawAmount" min="0.001" max={remaining / 1000}
+                                    step="0.001" required defaultValue={remaining / 1000} /></label>
+                                  <button type="submit">Confirm discard</button>
+                                </form>
+                              </details>
+                            </div>}
+                          </div>;
+                        })}
+                      </>}
                     </div>
                   </div>)}
                 </section>)}

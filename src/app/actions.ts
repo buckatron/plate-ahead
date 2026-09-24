@@ -12,6 +12,7 @@ import { PlanLockError, setDinnerLocked } from "@/services/plan-lock";
 import { PlanRepairError, repairPlan } from "@/services/repair-plan";
 import { CookingError, recordCooking } from "@/services/record-cooking";
 import { consumeLunch, LunchConsumptionError } from "@/services/consume-lunch";
+import { LeftoverActionError, manageLeftoverBatch } from "@/services/manage-leftovers";
 
 export type SettingsActionState = { status: "idle" | "saved" | "error"; message: string };
 
@@ -121,6 +122,23 @@ export async function consumeLunchAction(formData: FormData) {
   }
   const params = new URLSearchParams({ planId: input.data.planId });
   params.set(error ? "lunchError" : "lunchSaved", error ?? "1");
+  redirect(`/?${params}#slot-${input.data.slotId}`);
+}
+
+export async function manageLeftoversAction(formData: FormData) {
+  const input = z.object({ planId: z.uuid(), slotId: z.uuid(), batchId: z.string().min(1).max(100),
+    expectedRevision: z.coerce.number().int().positive(), requestId: z.uuid(),
+    change: z.enum(["freeze", "thaw", "discard"]), rawAmount: z.string().optional() }).safeParse(Object.fromEntries(formData));
+  if (!input.success) redirect("/?batchError=Refresh%20the%20week%20and%20try%20again.");
+  let error: string | null = null;
+  try {
+    await manageLeftoverBatch({ householdId: "home", ...input.data });
+    revalidatePath("/");
+  } catch (cause) {
+    error = cause instanceof LeftoverActionError ? cause.message : "Could not update leftovers. Please try again.";
+  }
+  const params = new URLSearchParams({ planId: input.data.planId });
+  params.set(error ? "batchError" : "batchSaved", error ?? input.data.change);
   redirect(`/?${params}#slot-${input.data.slotId}`);
 }
 

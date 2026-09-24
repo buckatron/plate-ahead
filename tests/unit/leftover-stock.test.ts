@@ -16,5 +16,10 @@ describe("leftover batch balance", () => {
   it("does not treat location changes as consumption", () => {
     expect(remainingBatchQuantity(200_000, [{ type: "freeze", quantityMilli: 0 },
       { type: "thaw", quantityMilli: 0 }])).toBe(200_000);
+    expect(() => remainingBatchQuantity(200_000, [{ type: "freeze", quantityMilli: 1 }])).toThrow(/cannot change/);
+  });
+
+  it("deducts a partial discard while preserving the rest", () => {
+    expect(remainingBatchQuantity(300_000, [{ type: "discard", quantityMilli: 50_000 }])).toBe(250_000);
   });
 });

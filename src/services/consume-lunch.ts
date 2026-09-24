@@ -41,6 +41,7 @@ export async function consumeLunch(input: { householdId: string; planId: string;
       const batch = await tx.leftoverBatch.findFirst({ where: { recipeComponentId: source.recipeComponentId,
         cookingEvent: { slotId: source.slotId, householdId: input.householdId } }, include: { movements: true } });
       if (!batch || batch.unit !== allocation.unit) throw new LunchConsumptionError("No confirmed batch is available for this lunch.");
+      if (batch.location !== "fridge") throw new LunchConsumptionError("Thaw the saved food before marking this lunch eaten.");
       const remainingMilli = remainingBatchQuantity(batch.quantityMilli, batch.movements);
       const current = requiredByBatch.get(batch.id);
       const quantityMilli = (current?.quantityMilli ?? 0) + allocation.reservedMilli;

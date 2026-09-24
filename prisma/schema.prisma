@@ -250,13 +250,13 @@ model LeftoverBatch {
 model LeftoverMovement {
   id                String @id @default(cuid())
   batchId           String
-  destinationSlotId String
+  destinationSlotId String?
   requestId         String
   type              String @default("consume")
   quantityMilli     Int
   recordedAt        DateTime @default(now())
   batch             LeftoverBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
-  destinationSlot   PlanSlot @relation(fields: [destinationSlotId], references: [id], onDelete: Restrict)
+  destinationSlot   PlanSlot? @relation(fields: [destinationSlotId], references: [id], onDelete: Restrict)
   @@unique([batchId, destinationSlotId])
   @@unique([batchId, requestId])
   @@index([destinationSlotId])

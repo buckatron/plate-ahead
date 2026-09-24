@@ -7,8 +7,12 @@ export function remainingBatchQuantity(initialMilli: number, movements: readonly
     if (!Number.isSafeInteger(movement.quantityMilli) || movement.quantityMilli < 0) {
       throw new Error("Invalid leftover movement quantity.");
     }
-    if (movement.type === "consume" || movement.type === "discard") remaining -= movement.quantityMilli;
-    else if (movement.type !== "freeze" && movement.type !== "thaw") throw new Error("Unknown leftover movement.");
+    if (movement.type === "consume" || movement.type === "discard") {
+      if (movement.quantityMilli === 0) throw new Error("A stock reduction must be positive.");
+      remaining -= movement.quantityMilli;
+    } else if (movement.type === "freeze" || movement.type === "thaw") {
+      if (movement.quantityMilli !== 0) throw new Error("Moving storage location cannot change quantity.");
+    } else throw new Error("Unknown leftover movement.");
     if (remaining < 0) throw new Error("Leftover movements exceed the batch quantity.");
   }
   return remaining;

@@ -85,6 +85,15 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .cooking-checkin button { width: max-content; }
 .meal-warning { color: #9a512f !important; font-weight: 700; }
 .cooked-summary { color: #397254 !important; font-weight: 700; }
+.batch-card { margin-top: 8px; border-left: 3px solid #a9c5a9; padding: 5px 0 5px 10px; font-size: 11px; color: #4b6652; }
+.batch-card p { margin: 0 0 5px !important; color: inherit !important; }
+.batch-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px 14px; }
+.batch-actions summary { cursor: pointer; padding: 5px 0; }
+.batch-actions form { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 3px 0; }
+.batch-actions label { display: flex; align-items: center; gap: 5px; }
+.batch-actions input[type="number"] { width: 76px; padding: 5px; border: 1px solid #b9cbb9; border-radius: 6px; font: inherit; }
+.batch-actions button { border: 1px solid #b9cbb9; border-radius: 6px; background: #eef3eb; color: #28553c; padding: 5px 8px; font: inherit; font-weight: 700; cursor: pointer; }
+.batch-actions button:focus-visible, .batch-actions summary:focus-visible, .batch-actions input:focus-visible { outline: 2px solid #397254; outline-offset: 2px; }
 .swap-heading { padding: 45px 0 25px; }
 .swap-heading h1 { margin-top: 14px; }
 .swap-notice, .swap-lunch-note { max-width: 760px; color: #647266; line-height: 1.55; font-size: 13px; }
