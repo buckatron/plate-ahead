@@ -62,7 +62,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {batchError && <p className="plan-error" role="alert">{batchError}</p>}
             {batchSaved && <p className="settings-message settings-saved" role="status">{batchSaved === "discard"
               ? "Discarded amount recorded. Remaining stock and linked lunches were updated."
-              : batchSaved === "freeze" ? "Batch marked frozen." : "Batch marked thawed and stored in the fridge."}</p>}
+              : batchSaved === "correct" ? "Remaining amount corrected. Linked lunches were rechecked."
+                : batchSaved === "freeze" ? "Batch marked frozen." : "Batch marked thawed and stored in the fridge."}</p>}
             {lunchSaved && <p className="settings-message settings-saved" role="status">Lunch recorded. Its reserved food was deducted from the confirmed batch.</p>}
             {cookingSaved && <p className="settings-message settings-saved" role="status">{cookingSaved === "shortfall"
               ? "Dinner recorded. A linked lunch needs attention because less food was saved than planned."
@@ -182,7 +183,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                           return <div className="batch-card" key={batch.id}>
                             <p><strong>{batch.recipeComponent.name}</strong> · {formatQuantity({ milli: remaining, unit })} remaining
                               {remaining > 0 && ` · in ${batch.location === "freezer" ? "freezer" : "fridge"}`}</p>
-                            {remaining > 0 && plan.state !== "draft" && <div className="batch-actions">
+                            {plan.state !== "draft" && <div className="batch-actions">
+                              {remaining > 0 && <>
                               <form action={manageLeftoversAction}>
                                 <input type="hidden" name="planId" value={plan.id} />
                                 <input type="hidden" name="slotId" value={slot.id} />
@@ -203,6 +205,21 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                                   <label>Amount ({unit}) <input type="number" name="rawAmount" min="0.001" max={remaining / 1000}
                                     step="0.001" required defaultValue={remaining / 1000} /></label>
                                   <button type="submit">Confirm discard</button>
+                                </form>
+                              </details>
+                              </>}
+                              <details><summary>Correct remaining amount</summary>
+                                <p>Use this if the saved amount was recorded incorrectly. Use discard for food thrown away.</p>
+                                <form action={manageLeftoversAction}>
+                                  <input type="hidden" name="planId" value={plan.id} />
+                                  <input type="hidden" name="slotId" value={slot.id} />
+                                  <input type="hidden" name="batchId" value={batch.id} />
+                                  <input type="hidden" name="expectedRevision" value={plan.revision} />
+                                  <input type="hidden" name="requestId" value={randomUUID()} />
+                                  <input type="hidden" name="change" value="correct" />
+                                  <label>Actual amount remaining ({unit}) <input type="number" name="rawAmount" min="0"
+                                    step="0.001" required defaultValue={remaining / 1000} /></label>
+                                  <button type="submit">Save correction</button>
                                 </form>
                               </details>
                             </div>}

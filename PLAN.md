@@ -292,7 +292,7 @@ Acceptance: replacing a dinner never leaves an orphan lunch, overallocated compo
 - [x] Create actual leftover batches only after confirmation.
 - [x] Record consumption of a planned linked lunch against confirmed leftover batches with an idempotent movement ledger.
 - [x] Freeze/thaw whole confirmed batches and record partial or full discards without treating a location move as consumption.
-- [ ] Record lunch consumption, freezing, adjustments, and discarding.
+- [x] Record lunch consumption, freezing, adjustments, and discarding with an auditable batch movement ledger.
 - [x] Show linked lunches still on the plan and confirmed batch quantities without a planned use across household weeks.
 - [ ] Add optional reactions, effort/leftover reasons, and recipe cooldowns.
 - [ ] Feed confirmed history and explicit preferences into future recommendations.

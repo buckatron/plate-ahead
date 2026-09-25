@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { remainingBatchQuantity, unallocatedBatchQuantity } from "../../src/domain/meals/leftover-stock";
+import { remainingBatchQuantity, stockCorrectionMovement, unallocatedBatchQuantity } from "../../src/domain/meals/leftover-stock";
 
 describe("leftover batch balance", () => {
   it("deducts confirmed consumption without changing the original batch", () => {
@@ -21,6 +21,18 @@ describe("leftover batch balance", () => {
 
   it("deducts a partial discard while preserving the rest", () => {
     expect(remainingBatchQuantity(300_000, [{ type: "discard", quantityMilli: 50_000 }])).toBe(250_000);
+  });
+
+  it("records a correction as a delta without rewriting the original batch", () => {
+    const down = stockCorrectionMovement(300_000, 100_000);
+    const up = stockCorrectionMovement(100_000, 350_000);
+    expect(down).toEqual({ type: "adjust_out", quantityMilli: 200_000 });
+    expect(up).toEqual({ type: "adjust_in", quantityMilli: 250_000 });
+    expect(remainingBatchQuantity(300_000, [down, up])).toBe(350_000);
+    expect(remainingBatchQuantity(300_000, [up, down])).toBe(350_000);
+    expect(stockCorrectionMovement(0, 50_000)).toEqual({ type: "adjust_in", quantityMilli: 50_000 });
+    expect(() => stockCorrectionMovement(100_000, 100_000)).toThrow(/already/);
+    expect(() => remainingBatchQuantity(100_000, [{ type: "adjust_out", quantityMilli: 150_000 }])).toThrow(/exceed/);
   });
 
   it("shows only the amount left beyond planned lunch reservations", () => {

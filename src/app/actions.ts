@@ -128,7 +128,7 @@ export async function consumeLunchAction(formData: FormData) {
 export async function manageLeftoversAction(formData: FormData) {
   const input = z.object({ planId: z.uuid(), slotId: z.uuid(), batchId: z.string().min(1).max(100),
     expectedRevision: z.coerce.number().int().positive(), requestId: z.uuid(),
-    change: z.enum(["freeze", "thaw", "discard"]), rawAmount: z.string().optional() }).safeParse(Object.fromEntries(formData));
+    change: z.enum(["freeze", "thaw", "discard", "correct"]), rawAmount: z.string().optional() }).safeParse(Object.fromEntries(formData));
   if (!input.success) redirect("/?batchError=Refresh%20the%20week%20and%20try%20again.");
   let error: string | null = null;
   try {

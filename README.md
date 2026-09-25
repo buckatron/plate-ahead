@@ -10,7 +10,7 @@ On the week page, **Skip this dinner** opens that night and cancels its linked l
 
 On an accepted week, **Mark dinner cooked** records servings eaten and the reusable amount actually saved for each component. This creates leftover batches only for confirmed positive amounts. A shortfall flags the linked lunch for attention. Once a dinner is recorded, that accepted week cannot be replaced by another draft.
 
-Once the source dinner is cooked, **Mark lunch eaten** records the planned lunch servings and deducts its reserved quantity from the confirmed batch. The remaining balance is calculated from that batch and its movements, and duplicate submissions cannot consume it twice. You can mark a batch frozen or thawed and record a partial or full discard; discarding too much is rejected and a linked lunch is flagged if its reserved food is no longer available. Partial lunches and manual stock adjustments are still future work.
+Once the source dinner is cooked, **Mark lunch eaten** records the planned lunch servings and deducts its reserved quantity from the confirmed batch. The remaining balance is calculated from that batch and its movements, and duplicate submissions cannot consume it twice. You can mark a batch frozen or thawed, record a partial or full discard, or correct a mistaken remaining amount (including zero). These changes are recorded in the movement ledger; they do not rewrite the original cooking entry. Linked lunches are flagged when too little remains and restored when a correction supplies enough. Partial lunches are still future work.
 
 The home-page sidebar now shows linked lunches still on accepted plans and confirmed saved food beyond any outstanding lunch reservation. It includes food from earlier weeks so an unused batch is not hidden when you generate a new plan. Stored dates are memory aids, not food-safety advice.
 
@@ -61,6 +61,8 @@ For the cooking check-in update, no package install is needed. Stop the app, run
 The lunch consumption update also adds a migration. After pulling it, use the same `db:deploy`, `db:generate`, and restart sequence; no package reinstall is needed.
 
 The batch freeze/discard update adds one more migration. After pulling, run `npm run db:deploy`, `npm run db:generate`, then restart `npm run dev`; do not reinstall packages.
+
+The stock correction update adds a migration too. After pulling, stop the app, run `npm run db:deploy` and `npm run db:generate`, then restart with `npm run dev`. No package reinstall is needed.
 
 The local SQLite runtime uses Prisma’s official `@prisma/adapter-better-sqlite3`, which includes a native `better-sqlite3` binary. The first install can pause while npm downloads or builds that binary; later installs reuse npm’s cache. The repository `.npmrc` enables offline preference and disables audit/funding network calls so startup is not delayed by unrelated registry work. npm may still print `prebuild-install` and ESLint deprecation notices from upstream packages; they are transitive/toolchain notices and do not indicate a Misewell runtime error.
 
