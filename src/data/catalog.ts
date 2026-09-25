@@ -1,4 +1,5 @@
 import type { Unit } from "@/domain/meals/quantity";
+import { extraRecipes, extraTransformations } from "./catalog-extra";
 
 export type CatalogAmount = { amount: number; unit: Unit };
 export type CatalogIngredient = { key: string; name: string; category: string; defaultUnit: Unit };
@@ -99,6 +100,7 @@ export const ingredients: CatalogIngredient[] = [
 ];
 
 export const recipes: CatalogRecipe[] = [
+  ...extraRecipes,
   {
     key: "citrus-roast-chicken", version: 1, title: "Citrus roast chicken & herby yogurt",
     summary: "Crisp potatoes, warm chicken, cool lemon-parsley yogurt.", role: "dinner", baseServings: 2, activeMinutes: 20, totalMinutes: 50,
@@ -327,6 +329,7 @@ export const recipes: CatalogRecipe[] = [
 ];
 
 export const transformations: CatalogTransformation[] = [
+  ...extraTransformations,
   { key: "chicken-to-quesadillas", sourceRecipeKey: "citrus-roast-chicken", sourceComponentKey: "chicken", targetRecipeKey: "chicken-bean-quesadillas", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
     description: "Reserve plain chicken before adding yogurt, then make smoky, crisp quesadillas for lunch.", compatibleState: "Cooked, plain chicken", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
   { key: "tofu-to-wraps", sourceRecipeKey: "coconut-ginger-tofu", sourceComponentKey: "tofu", targetRecipeKey: "peanut-tofu-wraps", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },

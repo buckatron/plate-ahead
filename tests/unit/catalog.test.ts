@@ -6,20 +6,23 @@ import { scaleRecipe } from "../../src/domain/meals/scale-recipe";
 describe("recipe catalog", () => {
   it("contains complete, compatible recipes and transformations", () => {
     expect(() => validateCatalog()).not.toThrow();
-    expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(12);
-    expect(transformations).toHaveLength(4);
+    expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(24);
+    expect(recipes.filter((recipe) => recipe.role === "lunch")).toHaveLength(8);
+    expect(transformations).toHaveLength(8);
   });
 
-  it("supports two separate six-dinner selections with two new lunches in each", () => {
+  it("supports four separate six-dinner selections with two new lunches in each", () => {
     const weeks = [
       ["citrus-roast-chicken", "coconut-ginger-tofu", "smoky-chickpea-tacos", "miso-mushroom-udon", "salmon-rice-bowls", "tomato-lentil-bake"],
       ["tomato-white-bean-pasta", "beef-broccoli-skillet", "chickpea-shakshuka", "thai-basil-pork", "gochujang-shrimp-udon", "sweet-potato-enchiladas"],
+      ["soy-ginger-chicken-cabbage", "lemon-lentil-feta-cakes", "garlic-shrimp-tomato-pasta", "beef-cumin-pita-patties", "gochujang-tofu-cabbage-cups", "mushroom-spinach-frittata"],
+      ["paprika-salmon-potatoes", "herbed-chickpea-pilaf", "white-bean-zucchini-skillet", "pork-cabbage-rice-meatballs", "sweet-potato-coconut-curry", "zucchini-feta-lemon-pasta"],
     ];
     const dinnerKeys = new Set(recipes.filter((recipe) => recipe.role === "dinner").map((recipe) => recipe.key));
     const transformable = new Set(transformations.map((item) => item.sourceRecipeKey));
     const selected = weeks.flat();
 
-    expect(new Set(selected).size).toBe(12);
+    expect(new Set(selected).size).toBe(24);
     for (const week of weeks) {
       expect(week).toHaveLength(6);
       expect(week.every((key) => dinnerKeys.has(key))).toBe(true);
