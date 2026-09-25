@@ -7,6 +7,7 @@ import type { ComponentUse } from "@/domain/meals/allocations";
 import { scaleQuantity, unitSchema } from "@/domain/meals/quantity";
 import { findHousehold } from "@/repositories/households";
 import { prisma } from "@/services/prisma";
+import { getCookingSignals } from "@/services/cooking-history";
 
 export async function createGeneratedWeek(householdId: string, now = new Date(), source?: {
   planId: string; expectedRevision: number;
@@ -14,6 +15,7 @@ export async function createGeneratedWeek(householdId: string, now = new Date(),
   const household = await findHousehold(householdId);
   if (!household) throw new PlanningError("Set up your kitchen before generating a week.");
   const weekStart = nextPlanningMonday(now, household.timezone);
+  const signals = await getCookingSignals(householdId, new Date(`${weekStart}T12:00:00Z`));
   const previous = await prisma.mealPlan.findFirst({
     where: { householdId, weekStart }, orderBy: { generationIndex: "desc" },
     include: { slots: { include: { recipe: true } } },
@@ -81,6 +83,7 @@ export async function createGeneratedWeek(householdId: string, now = new Date(),
     return { date: slot.localDate, recipe: candidate, lunch };
   });
   const week = generateWeek({ weekStart, settings: household.settings, candidates,
+    signals,
     recentKeys: previous?.slots.flatMap((slot) => slot.mealKind === "dinner" && slot.recipe ? [slot.recipe.recipeKey] : []) ?? [],
     generationIndex, lockedDinners });
   const planId = randomUUID();

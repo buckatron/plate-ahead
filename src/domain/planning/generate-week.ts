@@ -1,4 +1,5 @@
 import type { HouseholdSettings } from "../../schemas/household";
+import type { RecipeSignal } from "../feedback/learning";
 
 export type DinnerCandidate = {
   id: string;
@@ -43,10 +44,12 @@ function tag(candidate: DinnerCandidate, dimension: string): string[] {
   return candidate.tags[dimension] ?? [];
 }
 
-function score(candidate: DinnerCandidate, selected: DinnerCandidate[], recentKeys: Set<string>, settings: HouseholdSettings): number {
+function score(candidate: DinnerCandidate, selected: DinnerCandidate[], recentKeys: Set<string>,
+  signals: ReadonlyMap<string, RecipeSignal>, settings: HouseholdSettings): number {
   const varietyWeight = settings.varietyPreference === "adventurous" ? 1.5 : settings.varietyPreference === "familiar" ? 0.65 : 1;
   let points = candidate.lunchOptions.length ? 2 : 0;
   if (recentKeys.has(candidate.key)) points -= 5;
+  points += signals.get(candidate.key)?.points ?? 0;
   for (const other of selected) {
     for (const [dimension, penalty] of [["main", 6], ["format", 2.4], ["cuisine", 1.5], ["technique", 1]] as const) {
       if (tag(candidate, dimension).some((value) => tag(other, dimension).includes(value))) points -= penalty * varietyWeight;
@@ -63,6 +66,7 @@ export function generateWeek(input: {
   settings: HouseholdSettings;
   candidates: DinnerCandidate[];
   recentKeys?: string[];
+  signals?: ReadonlyMap<string, RecipeSignal>;
   generationIndex?: number;
   lockedDinners?: LockedDinner[];
 }): GeneratedWeek {
@@ -95,13 +99,18 @@ export function generateWeek(input: {
   }
   if (lockedLunchKeys.size > settings.lunchCount) throw new PlanningError("More kept lunches are linked than the new lunch target. Increase lunches or unlock a dinner.");
 
-  const candidates = [...input.candidates, ...[...lockedByIndex.values()].map((item) => item.recipe)]
-    .filter(fitsSettings);
+  const signals = input.signals ?? new Map<string, RecipeSignal>();
+  const canSupplyLunch = (candidate: DinnerCandidate) => candidate.lunchOptions.length > 0 &&
+    !signals.get(candidate.key)?.avoidLunch;
+  const candidates = [...new Map([...input.candidates, ...[...lockedByIndex.values()].map((item) => item.recipe)]
+    .map((candidate) => [candidate.key, candidate])).values()]
+    .filter((candidate) => fitsSettings(candidate) && (!signals.get(candidate.key)?.unavailable || lockedKeys.has(candidate.key)));
   if (new Set(candidates.map((candidate) => candidate.key)).size < settings.dinnerCount) {
-    throw new PlanningError("Not enough dinners fit the time limit and exclusions. Try relaxing those settings or add more recipes.");
+    throw new PlanningError("Not enough dinners fit the time limit, exclusions, and meal feedback. Relax a setting or edit a recipe's feedback.");
   }
-  if (candidates.filter((candidate) => candidate.lunchOptions.length).length < settings.lunchCount) {
-    throw new PlanningError("Not enough dinners can make the requested transformed lunches. Add more lunch options or lower the lunch target.");
+  if (candidates.filter(canSupplyLunch).length + [...lockedByIndex.values()].filter((item) =>
+    item.lunch && !canSupplyLunch(item.recipe)).length < settings.lunchCount) {
+    throw new PlanningError("Not enough appealing leftover pairings are available. Edit meal feedback or lower the lunch target.");
   }
 
   const recentKeys = new Set(input.recentKeys ?? []);
@@ -110,12 +119,12 @@ export function generateWeek(input: {
     if (selected[index]) continue;
     const chosen = selected.filter((item): item is DinnerCandidate => Boolean(item));
     const remaining = selected.filter((item) => !item).length;
-    const unlockedLunchSources = selected.filter((item, position) => item && !lockedByIndex.has(position) && item.lunchOptions.length).length;
+    const unlockedLunchSources = selected.filter((item, position) => item && !lockedByIndex.has(position) && canSupplyLunch(item)).length;
     const neededLunchSources = settings.lunchCount - lockedLunchKeys.size - unlockedLunchSources;
     const eligible = candidates.filter((candidate) => !chosen.some((item) => item.key === candidate.key) &&
-      (neededLunchSources < remaining || candidate.lunchOptions.length > 0));
+      (neededLunchSources < remaining || canSupplyLunch(candidate)));
     eligible.sort((a, b) => {
-      const difference = score(b, chosen, recentKeys, settings) - score(a, chosen, recentKeys, settings);
+      const difference = score(b, chosen, recentKeys, signals, settings) - score(a, chosen, recentKeys, signals, settings);
       return difference || hash(`${weekStart}:${input.generationIndex ?? 0}:${b.key}`) - hash(`${weekStart}:${input.generationIndex ?? 0}:${a.key}`);
     });
     const choice = eligible[0];
@@ -125,7 +134,7 @@ export function generateWeek(input: {
 
   const chosenDinners = selected.map((item) => item!);
   const lunchSources = chosenDinners.map((candidate, index) => ({ candidate, index }))
-    .filter(({ candidate, index }) => !lockedByIndex.has(index) && candidate.lunchOptions.length);
+    .filter(({ candidate, index }) => !lockedByIndex.has(index) && canSupplyLunch(candidate));
   const usedLunchKeys = new Set(lockedLunchKeys);
   const lunches = new Map<number, DinnerCandidate["lunchOptions"][number]>(
     [...lockedByIndex].flatMap(([index, locked]) => locked.lunch ? [[index, locked.lunch] as const] : []));
@@ -151,9 +160,12 @@ export function generateWeek(input: {
   const dinners = chosenDinners.map((recipe, index) => {
     const lunch = lunches.get(index);
     const shared = recipe.ingredients.find((ingredient) => !ingredient.isStaple && chosenDinners.some((other) => other.key !== recipe.key && other.ingredients.some((item) => item.id === ingredient.id)));
-    const reason = lockedByIndex.has(index) ? "Kept from the previous plan." : lunch ? `Make extra ${tag(recipe, "main")[0] ?? "the main component"} for a different lunch tomorrow.` :
+    const baseReason = lockedByIndex.has(index) ? "Kept from the previous plan." : lunch ? `Make extra ${tag(recipe, "main")[0] ?? "the main component"} for a different lunch tomorrow.` :
       shared ? `Shares ${shared.name.toLowerCase()} with another dinner, without repeating the meal.` :
       "A different main or cooking style to keep the week varied.";
+    const reaction = signals.get(recipe.key)?.reaction;
+    const reason = reaction === "loved" ? `${baseReason} You loved it before.` :
+      reaction === "good" ? `${baseReason} You enjoyed it before.` : baseReason;
     return { date: addDays(weekStart, index), recipe, reason, lunch, locked: lockedByIndex.has(index) };
   });
   return { weekStart, dinners, eatOutDate: addDays(weekStart, 6), flexibleDates: Array.from({ length: 6 - settings.dinnerCount }, (_, index) => addDays(weekStart, settings.dinnerCount + index)) };

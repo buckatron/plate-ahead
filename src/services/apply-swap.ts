@@ -118,6 +118,9 @@ export async function applySwap(input: {
     }
     await tx.plannedComponent.createMany({ data: plannedComponents });
     if (allocation) await tx.componentAllocation.create({ data: allocation });
+    await tx.interactionEvent.create({ data: { id: randomUUID(), householdId: input.householdId,
+      type: "dinner_swapped", planId: plan.id, slotId: dinner.id, recipeId: recipe.id,
+      previousRecipeId: dinner.recipeId } });
     return { cancelledLunch: Boolean(linkedLunch && !option.lunch) };
   });
 }

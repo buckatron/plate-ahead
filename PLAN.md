@@ -50,7 +50,7 @@ The weekly plan is the main screen. A shortlist appears when replacing a meal; t
 
 ## 3. Proposed architecture
 
-These are implementation choices, not existing project dependencies. The workspace currently contains no application code. Select compatible stable dependency versions at scaffolding time and commit the lockfile.
+The local prototype follows this architecture. Dependency versions and the lockfile are committed with the application.
 
 | Layer | Proposal | Responsibility |
 | --- | --- | --- |
@@ -168,9 +168,9 @@ The plan is a directed graph: source dinner components feed later lunches. Enfor
 | `CookingEvent` | `id`, `householdId`, optional `slotId`, recipe version, cooked timestamp, servings served, unique request ID |
 | `LeftoverBatch` | `id`, cooking event, component, actual reserved quantity/unit, location (fridge/freezer), stored timestamp, optional user-confirmed use date |
 | `LeftoverMovement` | `id`, `batchId`, consume/discard/freeze/thaw/adjust type, quantity/unit where applicable, timestamp, optional destination slot |
-| `MealFeedback` | `cookingEventId`, loved/good/not-again reaction, optional reason tags, optional notes |
-| `RecipePreference` | `householdId`, recipe identity, excluded flag, optional `snoozedUntil`; temporary fatigue is separate from dislike |
-| `InteractionEvent` | `householdId`, timestamp, event type (suggestion shown, selected, swapped, cooked), optional recipe/slot, recommendation request ID, optional explicit skip reason |
+| `MealFeedback` | `cookingEventId`, reaction, effort, leftover experience, prior enjoyment retained during a break, revision, update time |
+| `RecipePreference` | Proposed future record for manual recipe exclusions or snoozes; current cooldowns derive from dated meal feedback |
+| `InteractionEvent` | Local record of plan acceptance and dinner swaps with household, plan, optional slot, and recipe identifiers |
 
 Planned food and actual food are separate. Accepting a plan never creates a leftover batch. Confirmed cooking creates stock; recorded uses reduce it. Derive remaining quantity from the batch and movement ledger. Do not maintain an unrelated second balance. A freeze event changes location, not quantity.
 
@@ -235,7 +235,7 @@ After cooking, actual leftover batches remain even if future slots change. Repla
 
 ## 7. Ordered implementation tasks
 
-The foundation and first catalog slice are underway. Checked boxes reflect code that has been implemented and verified locally; the remaining boxes are still planned.
+The foundation, planning loop, and first catalog slice are implemented. Checked boxes reflect completed code; the remaining boxes are still planned.
 
 ### Phase 1: Foundation and domain contracts
 
@@ -295,8 +295,8 @@ Acceptance: replacing a dinner never leaves an orphan lunch, overallocated compo
 - [x] Record lunch consumption, freezing, adjustments, and discarding with an auditable batch movement ledger.
 - [x] Show linked lunches still on the plan and confirmed batch quantities without a planned use across household weeks.
 - [x] Capture editable, optional enjoyment, effort, and leftover-experience feedback on confirmed cooked dinners.
-- [ ] Add optional reactions, effort/leftover reasons, and recipe cooldowns.
-- [ ] Feed confirmed history and explicit preferences into future recommendations.
+- [x] Add optional reactions, effort/leftover reasons, and recipe cooldowns.
+- [x] Feed confirmed history and explicit preferences into future recommendations and swap suggestions.
 
 Acceptance: cooking and consuming a linked lunch reconciles actual stock, handles shortages, and changes future recommendations appropriately.
 
@@ -304,9 +304,9 @@ Acceptance: cooking and consuming a linked lunch reconciles actual stock, handle
 
 - [ ] Verify mobile layout, keyboard navigation, readable recipes, grocery checkboxes, loading, and recoverable errors.
 - [ ] Test the complete default-household journey: generate, swap, shop, cook, consume lunch, react, generate another week.
-- [ ] Add export and documented backup/restore for local household data.
-- [ ] Record lightweight product events for evaluating acceptance and swaps; keep them local in the MVP.
-- [ ] Document remaining limitations and the additional authentication, migration, backup, and deployment work required for public hosting.
+- [x] Add local SQLite export through a backup command and documented backup/restore for household data.
+- [x] Record lightweight product events for evaluating acceptance and swaps; keep them local in the MVP.
+- [x] Document remaining limitations and the additional authentication, migration, backup, and deployment work required for public hosting.
 - [ ] Use the app for a real weekly planning cycle and adjust based on observed friction.
 
 ## 8. Verification priorities

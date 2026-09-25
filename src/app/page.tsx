@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
-import { acceptPlanAction, consumeLunchAction, generateWeekAction, manageLeftoversAction, recordCookingAction, repairPlanAction, saveMealFeedbackAction, setDinnerLockedAction } from "@/app/actions";
+import { acceptPlanAction, consumeLunchAction, generateWeekAction, manageLeftoversAction, recordCookingAction, repairPlanAction, setDinnerLockedAction } from "@/app/actions";
 import { formatQuantity } from "@/domain/meals/scale-recipe";
 import { remainingBatchQuantity } from "@/domain/meals/leftover-stock";
 import { findHousehold } from "@/repositories/households";
@@ -8,6 +8,7 @@ import { findActivePlanReference, findLatestPlan, findPlanById } from "@/reposit
 import { SiteHeader } from "@/components/site-header";
 import { SettingsForm } from "@/components/settings-form";
 import { LeftoverOverview } from "@/components/leftover-overview";
+import { MealFeedbackForm } from "@/components/meal-feedback-form";
 import { getLeftoverOverview } from "@/services/leftover-overview";
 
 export const dynamic = "force-dynamic";
@@ -181,41 +182,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                       {slot.cookingEvent && <>
                         <p className="cooked-summary">Cooked · {slot.cookingEvent.servingsServed} servings eaten.
                           {!slot.cookingEvent.batches.length && " No reusable food saved."}</p>
-                        <details className="meal-repair meal-feedback"><summary>{slot.cookingEvent.feedback ? "Edit meal feedback" : "How was this meal?"}</summary>
-                          <p>Optional answers help us learn what to repeat and what needs a break.</p>
-                          <form action={saveMealFeedbackAction}>
-                            <input type="hidden" name="planId" value={plan.id} />
-                            <input type="hidden" name="slotId" value={slot.id} />
-                            <input type="hidden" name="cookingEventId" value={slot.cookingEvent.id} />
-                            <input type="hidden" name="expectedRevision" value={slot.cookingEvent.feedback?.revision ?? 0} />
-                            <label>Would you cook it again?
-                              <select name="reaction" defaultValue={slot.cookingEvent.feedback?.reaction ?? ""}>
-                                <option value="">Skip this question</option>
-                                <option value="loved">Loved it</option>
-                                <option value="good">Good</option>
-                                <option value="break">Need a break</option>
-                                <option value="not_again">Not again</option>
-                              </select>
-                            </label>
-                            <label>How did the effort feel?
-                              <select name="effort" defaultValue={slot.cookingEvent.feedback?.effort ?? ""}>
-                                <option value="">Skip this question</option>
-                                <option value="easy">Easy</option>
-                                <option value="about_right">About right</option>
-                                <option value="too_much">Too much effort</option>
-                              </select>
-                            </label>
-                            {slot.cookingEvent.batches.length > 0 && <label>How did the leftovers sound?
-                              <select name="leftovers" defaultValue={slot.cookingEvent.feedback?.leftovers ?? ""}>
-                                <option value="">Skip this question</option>
-                                <option value="appealing">Appealing</option>
-                                <option value="okay">Okay</option>
-                                <option value="not_appealing">Not appealing</option>
-                              </select>
-                            </label>}
-                            <button type="submit">Save feedback</button>
-                          </form>
-                        </details>
+                        <MealFeedbackForm planId={plan.id} slotId={slot.id} cookingEventId={slot.cookingEvent.id}
+                          feedback={slot.cookingEvent.feedback} hasLeftovers={slot.cookingEvent.batches.length > 0} />
                         {slot.cookingEvent.batches.map((batch) => {
                           const unit = batch.unit as "g" | "kg" | "ml" | "l" | "each" | "portion";
                           const remaining = remainingBatchQuantity(batch.quantityMilli, batch.movements);

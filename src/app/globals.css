@@ -99,6 +99,12 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .meal-feedback select { width: 100%; border: 1px solid #b9cbb9; border-radius: 6px; padding: 6px; background: #fffefa; color: #223128; font: inherit; }
 .meal-feedback select:focus-visible { outline: 2px solid #397254; outline-offset: 2px; }
 .meal-feedback button { width: max-content; }
+.history-list { display: grid; gap: 14px; margin: 24px 0; }
+.history-card h2 { font-size: 23px; }
+.history-card h2 a { color: #254c37; text-decoration: none; }
+.history-card h2 a:hover { text-decoration: underline; }
+.history-card > p { color: #657568; font-size: 13px; line-height: 1.5; }
+.history-card .history-status { color: #9a512f; font-weight: 700; }
 .meal-warning { color: #9a512f !important; font-weight: 700; }
 .cooked-summary { color: #397254 !important; font-weight: 700; }
 .batch-card { margin-top: 8px; border-left: 3px solid #a9c5a9; padding: 5px 0 5px 10px; font-size: 11px; color: #4b6652; }
@@ -211,7 +217,7 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .lunch-panel { background: #e5e9d8; }
 .lunch-panel h2 { margin: 11px 0; }
 .lunch-panel .text-link { display: inline-block; margin-top: 3px; }
-@media (max-width: 720px) { .page { padding: 18px; } .hero { padding: 42px 0; min-height: 0; } .hero-mark { display: none; } .content-grid { grid-template-columns: 1fr; } h1 { letter-spacing: -2px; } .eyebrow { display: none; } }
+@media (max-width: 720px) { .page { padding: 18px; } .topbar { flex-wrap: wrap; } .site-nav { flex-wrap: wrap; gap: 10px 18px; } .hero { padding: 42px 0; min-height: 0; } .hero-mark { display: none; } .content-grid { grid-template-columns: 1fr; } h1 { letter-spacing: -2px; overflow-wrap: anywhere; } .eyebrow { display: none; } }
 @media (max-width: 720px) { .recipe-grid, .recipe-layout { grid-template-columns: 1fr; } .library-heading { padding-top: 42px; } .recipe-card { min-height: 0; } .recipe-hero { padding: 35px 0; } }
 @media (max-width: 720px) { .grocery-sections { grid-template-columns: 1fr; } .grocery-heading { padding-top: 32px; } }
 @media (max-width: 720px) { .swap-grid { grid-template-columns: 1fr; } }

@@ -3,6 +3,7 @@ node_modules/
 coverage/
 src/generated/
 /dev.db*
+/backups/
 prisma/dev.db*
 .env*
 !.env.example

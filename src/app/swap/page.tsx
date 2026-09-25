@@ -56,6 +56,6 @@ export default async function SwapPage({ searchParams }: { searchParams: Promise
           <button type="submit">{result.linkedLunch && !option.lunch ? "Swap dinner & cancel lunch" : "Swap to this dinner"}</button>
         </form>}
     </article>)}</div> : <div className="panel grocery-empty"><h2>No suitable alternatives yet</h2>
-      <p>The remaining recipes are already planned or do not fit this plan’s time limit and exclusions. Try changing preferences and generating another draft.</p></div>}
+      <p>The remaining recipes are already planned, outside the time limit, excluded, or taking a break based on feedback. Edit feedback in History or change settings before generating another draft.</p></div>}
   </div></main>;
 }

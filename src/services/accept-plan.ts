@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { addDays } from "@/domain/planning/generate-week";
 import { plannedSlotsForAcceptance, validatePlanDraft, type PlanSlotDraft } from "@/domain/planning/plan";
 import type { ComponentUse } from "@/domain/meals/allocations";
@@ -99,5 +100,7 @@ export async function acceptPlan(householdId: string, planId: string, expectedRe
       data: { state: "active", revision: { increment: 1 } },
     });
     if (accepted.count !== 1) throw new PlanAcceptanceError("This draft changed in another tab. Refresh before accepting it.");
+    await tx.interactionEvent.create({ data: { id: randomUUID(), householdId,
+      type: "plan_accepted", planId } });
   });
 }

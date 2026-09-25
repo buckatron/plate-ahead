@@ -1,5 +1,6 @@
 import type { HouseholdSettings } from "../../schemas/household";
 import type { DinnerCandidate } from "./generate-week";
+import type { RecipeSignal } from "../feedback/learning";
 
 export type SwapOption = {
   recipe: DinnerCandidate;
@@ -22,6 +23,7 @@ export function rankSwapOptions(input: {
   settings: HouseholdSettings;
   hasLinkedLunch: boolean;
   otherLunchKeys?: string[];
+  signals?: ReadonlyMap<string, RecipeSignal>;
 }): SwapOption[] {
   const usedKeys = new Set([input.current.key, ...input.otherDinners.map((item) => item.key)]);
   const otherIngredientIds = new Set(input.otherDinners.flatMap((dinner) => dinner.ingredients
@@ -32,20 +34,25 @@ export function rankSwapOptions(input: {
   const cuisineTags = otherTags("cuisine");
   const usedLunchKeys = new Set(input.otherLunchKeys ?? []);
 
-  return input.candidates.filter((recipe) => !usedKeys.has(recipe.key) && allowed(recipe, input.settings))
+  return input.candidates.filter((recipe) => !usedKeys.has(recipe.key) && allowed(recipe, input.settings) &&
+    !input.signals?.get(recipe.key)?.unavailable)
     .map((recipe) => {
       const sharedIngredients = recipe.ingredients.filter((item) => !item.isStaple && otherIngredientIds.has(item.id)).map((item) => item.name);
       const freshMain = !(recipe.tags.main ?? []).some((value) => mainTags.has(value));
       const freshFormat = !(recipe.tags.format ?? []).some((value) => formatTags.has(value));
       const freshCuisine = !(recipe.tags.cuisine ?? []).some((value) => cuisineTags.has(value));
-      const lunch = input.hasLinkedLunch ? recipe.lunchOptions.find((option) => !usedLunchKeys.has(option.lunchKey)) ?? null : null;
+      const signal = input.signals?.get(recipe.key);
+      const lunch = input.hasLinkedLunch && !signal?.avoidLunch
+        ? recipe.lunchOptions.find((option) => !usedLunchKeys.has(option.lunchKey)) ?? null : null;
       const score = (freshMain ? 7 : 0) + (freshFormat ? 3 : 0) + (freshCuisine ? 2 : 0) +
         Math.min(sharedIngredients.length, 2) * 1.5 + (input.hasLinkedLunch && lunch ? 4 : 0) +
-        recipe.ingredients.filter((item) => item.useFirst).length;
-      const reason = sharedIngredients.length
+        recipe.ingredients.filter((item) => item.useFirst).length + (signal?.points ?? 0);
+      const baseReason = sharedIngredients.length
         ? `Shares ${sharedIngredients[0].toLowerCase()} with another dinner while changing the menu.`
         : freshMain && freshFormat ? "A different main and meal format for the week." :
           freshMain ? "A different main ingredient for the week." : "A different way to cook this week.";
+      const reason = signal?.reaction === "loved" ? `${baseReason} You loved it before.` :
+        signal?.reaction === "good" ? `${baseReason} You enjoyed it before.` : baseReason;
       return { recipe, reason, lunch, sharedIngredients, score };
     })
     .sort((a, b) => b.score - a.score || a.recipe.key.localeCompare(b.recipe.key))

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { recipes, transformations, ingredients } from "../../src/data/catalog";
 import { addDays, generateWeek, nextPlanningMonday, PlanningError, type DinnerCandidate } from "../../src/domain/planning/generate-week";
 import { DEFAULT_SETTINGS } from "../../src/schemas/household";
+import { learningSignals } from "../../src/domain/feedback/learning";
 
 const ingredientByKey = new Map(ingredients.map((ingredient) => [ingredient.key, ingredient]));
 const candidates: DinnerCandidate[] = recipes.filter((recipe) => recipe.role === "dinner").map((recipe) => ({
@@ -67,5 +68,23 @@ describe("week generation", () => {
     expect(() => generateWeek({ weekStart: "2026-09-28", settings: DEFAULT_SETTINGS, candidates,
       lockedDinners: first.dinners.map((dinner) => ({ date: dinner.date, recipe: dinner.recipe })) }))
       .toThrow(/Unlock one or lower the lunch target/);
+  });
+
+  it("respects explicit feedback when choosing dinners and transformed lunches", () => {
+    const source = candidates.find((candidate) => candidate.lunchOptions.length)!;
+    const excluded = candidates.find((candidate) => candidate.key !== source.key)!;
+    const signals = learningSignals([
+      { recipeKey: source.key, cookedAt: new Date("2026-09-01T12:00:00Z"), feedback: {
+        reaction: "good", priorEnjoyment: null, effort: null, leftovers: "not_appealing",
+        updatedAt: new Date("2026-09-25T12:00:00Z"),
+      } },
+      { recipeKey: excluded.key, cookedAt: new Date("2026-09-01T12:00:00Z"), feedback: {
+        reaction: "not_again", priorEnjoyment: null, effort: null, leftovers: null,
+        updatedAt: new Date("2026-09-25T12:00:00Z"),
+      } },
+    ], new Date("2026-09-28T12:00:00Z"));
+    const week = generateWeek({ weekStart: "2026-09-28", settings: DEFAULT_SETTINGS, candidates, signals });
+    expect(week.dinners.some((dinner) => dinner.recipe.key === excluded.key)).toBe(false);
+    expect(week.dinners.find((dinner) => dinner.recipe.key === source.key)?.lunch).toBeUndefined();
   });
 });

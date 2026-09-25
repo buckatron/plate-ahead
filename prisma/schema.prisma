@@ -19,6 +19,7 @@ model Household {
   plans       MealPlan[]
   groceryLists GroceryList[]
   cookingEvents CookingEvent[]
+  interactionEvents InteractionEvent[]
 }
 
 model HouseholdPreferences {
@@ -237,11 +238,25 @@ model CookingEvent {
 model MealFeedback {
   cookingEventId String @id
   reaction       String?
+  priorEnjoyment String?
   effort         String?
   leftovers      String?
   revision       Int @default(1)
   updatedAt      DateTime @updatedAt
   cookingEvent   CookingEvent @relation(fields: [cookingEventId], references: [id], onDelete: Cascade)
+}
+
+model InteractionEvent {
+  id               String @id @default(cuid())
+  householdId      String
+  type             String
+  planId           String
+  slotId           String?
+  recipeId         String?
+  previousRecipeId String?
+  createdAt        DateTime @default(now())
+  household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  @@index([householdId, type, createdAt])
 }
 
 model LeftoverBatch {

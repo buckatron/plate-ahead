@@ -7,6 +7,7 @@ import type { GroceryComponent } from "@/domain/meals/groceries";
 import { scaleQuantity, unitSchema } from "@/domain/meals/quantity";
 import { householdSettingsSchema } from "@/schemas/household";
 import { prisma } from "@/services/prisma";
+import { getCookingSignals } from "@/services/cooking-history";
 
 export async function getSwapShortlist(householdId: string, planId: string, slotId: string) {
   const plan = await prisma.mealPlan.findFirst({ where: { id: planId, householdId }, include: {
@@ -20,6 +21,7 @@ export async function getSwapShortlist(householdId: string, planId: string, slot
   const slot = plan.slots.find((item) => item.id === slotId && item.mealKind === "dinner" &&
     item.slotType === "cook" && item.status === "planned" && item.recipe);
   if (!slot?.recipe) return null;
+  const signals = await getCookingSignals(householdId, new Date(`${slot.localDate}T12:00:00Z`));
   const settings = householdSettingsSchema.parse(JSON.parse(plan.settingsJson) as unknown);
   const allRecipes = await prisma.recipe.findMany({ where: { reviewStatus: "reviewed" }, include: {
     tags: true, components: { include: { ingredients: { include: { ingredient: true } }, sourceTransformations: { include: { inputs: true } } } },
@@ -84,6 +86,7 @@ export async function getSwapShortlist(householdId: string, planId: string, slot
       };
     });
   const options = rankSwapOptions({ current, otherDinners, candidates: dinners.map(candidateFromRecipe), settings,
+    signals,
     hasLinkedLunch: Boolean(linkedLunch), otherLunchKeys: plan.slots.filter((item) =>
       item.mealKind === "lunch" && item.id !== linkedLunch?.id && item.recipe).map((item) => item.recipe!.recipeKey) });
   const previews = options.map((option) => {

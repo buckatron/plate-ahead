@@ -8,6 +8,7 @@ export function SiteHeader() {
         <Link href="/">This week</Link>
         <Link href="/groceries">Groceries</Link>
         <Link href="/recipes">Recipes</Link>
+        <Link href="/history">History</Link>
       </nav>
     </header>
   );

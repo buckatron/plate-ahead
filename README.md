@@ -10,7 +10,7 @@ On the week page, **Skip this dinner** opens that night and cancels its linked l
 
 On an accepted week, **Mark dinner cooked** records servings eaten and the reusable amount actually saved for each component. This creates leftover batches only for confirmed positive amounts. A shortfall flags the linked lunch for attention. Once a dinner is recorded, that accepted week cannot be replaced by another draft.
 
-After recording dinner, **How was this meal?** lets you optionally save or edit whether you would cook it again, how the effort felt, and whether its leftovers sounded appealing. The answers stay attached to the cooked meal, not an uncooked plan. They are collected now but do not yet influence recommendations or create recipe cooldowns.
+After recording dinner, **How was this meal?** lets you optionally save or edit whether you would cook it again, how the effort felt, and whether its leftovers sounded appealing. The **History** page keeps those cooked meals and their feedback accessible. Confirmed cooking discourages recent repeats; “Loved it” and “Good” can favor a recipe once enough time has passed. “Need a break” removes it from new suggestions for four weeks, while “Not again” removes it until you change the feedback. An unappealing leftover rating prevents that dinner from supplying a new linked lunch. The current planner uses simple, visible rules, not a trained model.
 
 Once the source dinner is cooked, **Mark lunch eaten** records the planned lunch servings and deducts its reserved quantity from the confirmed batch. The remaining balance is calculated from that batch and its movements, and duplicate submissions cannot consume it twice. You can mark a batch frozen or thawed, record a partial or full discard, or correct a mistaken remaining amount (including zero). These changes are recorded in the movement ledger; they do not rewrite the original cooking entry. Linked lunches are flagged when too little remains and restored when a correction supplies enough. Partial lunches are still future work.
 
@@ -54,19 +54,7 @@ npm run dev
 
 If the app was already running, Next.js will usually apply code changes automatically. Restart it with `Ctrl+C`, then `npm run dev`, after `npm run db:generate`, a dependency change, or any change that affects the Prisma client.
 
-For the grocery review update, no package install is needed. Stop the app, run `npm run db:deploy` and `npm run db:generate`, then run `npm run dev` again.
-
-For the dinner swap update, no package install or database migration is needed. Restart the app with `npm run dev` if it is not already running.
-
-For the cooking check-in update, no package install is needed. Stop the app, run `npm run db:deploy` and `npm run db:generate`, then restart with `npm run dev`.
-
-The lunch consumption update also adds a migration. After pulling it, use the same `db:deploy`, `db:generate`, and restart sequence; no package reinstall is needed.
-
-The batch freeze/discard update adds one more migration. After pulling, run `npm run db:deploy`, `npm run db:generate`, then restart `npm run dev`; do not reinstall packages.
-
-The stock correction update adds a migration too. After pulling, stop the app, run `npm run db:deploy` and `npm run db:generate`, then restart with `npm run dev`. No package reinstall is needed.
-
-The meal feedback update also adds a migration. Use the same deploy, generate, and restart sequence after pulling; no package reinstall is needed.
+The history, cooldown, and local event update adds migrations. After pulling it, stop the app, run `npm run db:deploy` and `npm run db:generate`, then restart with `npm run dev`. No package reinstall is needed.
 
 The local SQLite runtime uses Prisma’s official `@prisma/adapter-better-sqlite3`, which includes a native `better-sqlite3` binary. The first install can pause while npm downloads or builds that binary; later installs reuse npm’s cache. The repository `.npmrc` enables offline preference and disables audit/funding network calls so startup is not delayed by unrelated registry work. npm may still print `prebuild-install` and ESLint deprecation notices from upstream packages; they are transitive/toolchain notices and do not indicate a Misewell runtime error.
 
@@ -76,4 +64,25 @@ Prisma CLI, client, and SQLite adapter are pinned to version 7.10.0. This schema
 
 Use `npm run db:migrate -- --name descriptive_change` only after changing the schema; a fresh setup applies the checked-in migrations with `npm run db:deploy`. The SQLite file is local and ignored by Git. Run `npm run typecheck`, `npm run lint`, and `npm test` after changes.
 
-If a development server was already running while `npm run db:generate` updated the Prisma client, restart that server before using grocery review.
+If a development server was already running while `npm run db:generate` updated the Prisma client, restart that server before using the app.
+
+## Back up or restore your local data
+
+`npm run db:backup` creates a consistent SQLite copy in the ignored `backups/` folder. Copy that `.db` file somewhere else for safekeeping; Git does not include it. Back up before upgrading or changing machines.
+
+To restore, stop the app and any database tools, then run:
+
+```powershell
+npm run db:restore -- backups/misewell-YOUR-BACKUP.db
+npm run db:deploy
+npm run db:generate
+npm run dev
+```
+
+Restore accepts only a `.db` file inside this project's `backups/` folder, checks its SQLite integrity, and first saves the current database as `backups/before-restore-...db`. Restoring replaces the local database, including any plans and feedback created since the selected backup. The backup files contain all household data; keep them private. If the database uses active SQLite journal files, restore stops and asks you to close the app first.
+
+## Current limits
+
+This is a single-household local prototype. It has no accounts, public access controls, or automatic off-device backups. Recipe instructions and storage notes have structural and source checks, but the meals have not been kitchen-tested. The catalog is still smaller than the planned 24 dinners and 8–12 lunches. Lunch consumption records the planned serving amount; partial lunches and purchase quantities are not recorded. The current recommendation rules use recent cooking and feedback, but do not estimate food waste or savings.
+
+Public hosting would require household authentication and authorization on every read and write, a hosted database migration, protected backups and restore procedures, deployment configuration, and a review of data retention and recipe content. Do not expose this local build on the public internet as-is.

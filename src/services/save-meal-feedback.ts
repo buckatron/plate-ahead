@@ -22,7 +22,10 @@ export async function saveMealFeedback(input: { householdId: string; planId: str
     if ((event.feedback?.revision ?? 0) !== input.expectedRevision) {
       throw new MealFeedbackError("Feedback changed in another tab. Refresh this meal before saving.");
     }
-    const data = { reaction: input.reaction, effort: input.effort, leftovers: input.leftovers };
+    const priorEnjoyment = input.reaction === "break" ?
+      event.feedback?.reaction === "loved" || event.feedback?.reaction === "good"
+        ? event.feedback.reaction : event.feedback?.priorEnjoyment ?? null : null;
+    const data = { reaction: input.reaction, priorEnjoyment, effort: input.effort, leftovers: input.leftovers };
     if (event.feedback) {
       const updated = await tx.mealFeedback.updateMany({ where: { cookingEventId: event.id,
         revision: input.expectedRevision }, data: { ...data, revision: { increment: 1 } } });
