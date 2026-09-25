@@ -1,6 +1,6 @@
 import "server-only";
 
-import { aggregateGroceryNeeds, type GroceryComponent } from "@/domain/meals/groceries";
+import { aggregateGroceryNeeds, unmeasuredGroceryNeeds, type GroceryComponent } from "@/domain/meals/groceries";
 import { findUnallocatedPurchases, parseOnHandAmount, reviewGroceryNeed } from "@/domain/meals/grocery-review";
 import { toBaseQuantity, unitSchema } from "@/domain/meals/quantity";
 import { prisma } from "@/services/prisma";
@@ -31,7 +31,7 @@ export async function getGroceryNeeds(householdId: string, planId: string) {
         ingredients: source.ingredients.map((item) => ({
           ingredientId: item.ingredientId, name: item.ingredient.name,
           category: item.ingredient.groceryCategory,
-          quantity: { milli: item.quantityMilli, unit: unitSchema.parse(item.unit) },
+          quantity: item.quantityMilli === null ? null : { milli: item.quantityMilli, unit: unitSchema.parse(item.unit) },
           optional: item.optional,
         })),
       });
@@ -40,9 +40,12 @@ export async function getGroceryNeeds(householdId: string, planId: string) {
 
   const savedLines = new Map(plan.groceryList?.lines.map((line) => [`${line.ingredientId}:${line.unitGroup}`, line]) ?? []);
   const needs = aggregateGroceryNeeds(components);
+  const unmeasured = unmeasuredGroceryNeeds(components);
   return { plan: { id: plan.id, weekStart: plan.weekStart, state: plan.state, revision: plan.revision },
+    unmeasured: unmeasured.map((item) => ({ ...item, checked: savedLines.get(`${item.ingredientId}:unmeasured`)?.checked ?? false })),
     needs: needs.map((need) => reviewGroceryNeed(need, savedLines.get(need.key))),
-    unallocatedPurchased: findUnallocatedPurchases(needs, plan.groceryList?.lines.map((line) => ({
+    unallocatedPurchased: findUnallocatedPurchases([...needs, ...unmeasured.map((item) => ({
+      key: `${item.ingredientId}:unmeasured` }))], plan.groceryList?.lines.map((line) => ({
       ingredientId: line.ingredientId, unitGroup: line.unitGroup, checked: line.checked,
       name: line.ingredient.name, category: line.ingredient.groceryCategory,
     })) ?? []) };
@@ -56,9 +59,11 @@ async function mutateGroceryLine(input: {
   if (!snapshot) throw new GroceryActionError("This plan is no longer available.");
   if (snapshot.plan.revision !== input.expectedRevision) throw new GroceryActionError("The plan changed. Refresh groceries before saving.");
   const need = snapshot.needs.find((line) => line.ingredientId === input.ingredientId && toBaseQuantity(line.quantity).group === input.unitGroup);
+  const unmeasuredNeed = input.unitGroup === "unmeasured" && snapshot.unmeasured.some((item) => item.ingredientId === input.ingredientId);
+  if (unmeasuredNeed && "onHandMilli" in input.change) throw new GroceryActionError("This ingredient has no measured amount. Use its shopping check instead.");
   const clearingUnallocated = !need && "checked" in input.change && !input.change.checked &&
     snapshot.unallocatedPurchased.some((line) => line.ingredientId === input.ingredientId && line.unitGroup === input.unitGroup);
-  if (!need && !clearingUnallocated) throw new GroceryActionError("That ingredient is not in this plan. Refresh groceries before saving.");
+  if (!need && !unmeasuredNeed && !clearingUnallocated) throw new GroceryActionError("That ingredient is not in this plan. Refresh groceries before saving.");
 
   await prisma.$transaction(async (tx) => {
     const currentPlan = await tx.mealPlan.findFirst({ where: { id: input.planId, householdId: input.householdId }, select: { revision: true } });

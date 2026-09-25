@@ -7,7 +7,7 @@ export interface ScalableRecipe {
     name: string;
     baseYieldMilli: number;
     yieldUnit: string;
-    ingredients: Array<{ quantityMilli: number; unit: string; ingredient: { name: string } }>;
+    ingredients: Array<{ quantityMilli: number | null; unit: string; ingredient: { name: string } }>;
   }>;
 }
 
@@ -34,7 +34,7 @@ export function scaleRecipe(recipe: ScalableRecipe, servings: number, extraByCom
       totalYieldMilli,
       ingredients: component.ingredients.map((item) => ({
         ...item,
-        scaled: scaleQuantity({ milli: item.quantityMilli, unit: unitSchema.parse(item.unit) }, totalYieldMilli, baseYield.milli),
+        scaled: item.quantityMilli === null ? null : scaleQuantity({ milli: item.quantityMilli, unit: unitSchema.parse(item.unit) }, totalYieldMilli, baseYield.milli),
       })),
     };
   });

@@ -11,7 +11,7 @@ export interface GroceryComponent {
     ingredientId: string;
     name: string;
     category: string;
-    quantity: Quantity;
+    quantity: Quantity | null;
     optional: boolean;
   }>;
 }
@@ -47,6 +47,7 @@ export function aggregateGroceryNeeds(components: GroceryComponent[]): GroceryNe
 
     for (const ingredient of component.ingredients) {
       if (ingredient.optional) continue;
+      if (ingredient.quantity === null) continue;
       const scaled = scaleQuantity(ingredient.quantity, plannedYield.milli, baseYield.milli);
       const normalized = toBaseQuantity(scaled);
       const unit = unitSchema.parse(baseUnit[normalized.group]);
@@ -74,4 +75,16 @@ export function aggregateGroceryNeeds(components: GroceryComponent[]): GroceryNe
   }
 
   return [...needs.values()].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name) || a.key.localeCompare(b.key));
+}
+
+export function unmeasuredGroceryNeeds(components: GroceryComponent[]) {
+  const rows = new Map<string, { ingredientId: string; name: string; category: string; meals: string[] }>();
+  for (const component of components) for (const ingredient of component.ingredients) {
+    if (ingredient.optional || ingredient.quantity !== null) continue;
+    const row = rows.get(ingredient.ingredientId) ?? { ingredientId: ingredient.ingredientId,
+      name: ingredient.name, category: ingredient.category, meals: [] };
+    if (!row.meals.includes(component.recipeTitle)) row.meals.push(component.recipeTitle);
+    rows.set(ingredient.ingredientId, row);
+  }
+  return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name));
 }

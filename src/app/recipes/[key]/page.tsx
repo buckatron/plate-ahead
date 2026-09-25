@@ -9,13 +9,14 @@ export const dynamic = "force-dynamic";
 
 type RecipePageProps = {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ servings?: string; lunch?: string }>;
+  searchParams: Promise<{ servings?: string; lunch?: string; version?: string }>;
 };
 
 export default async function RecipePage({ params, searchParams }: RecipePageProps) {
   const { key } = await params;
   const query = await searchParams;
-  const detail = await getRecipe(key);
+  const version = Number(query.version);
+  const detail = await getRecipe(key, "home", Number.isInteger(version) && version > 0 ? version : undefined);
   if (!detail) notFound();
 
   const { recipe, outgoing, incoming } = detail;
@@ -46,7 +47,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             <p className="overline">{cuisine} · {recipe.role}</p>
             <h1>{recipe.title}</h1>
             <p className="lead">{recipe.summary}</p>
-            <div className="recipe-meta"><span>{recipe.totalMinutes} min total</span><span>{recipe.activeMinutes} min active</span><span>Serves {servings}</span></div>
+            <div className="recipe-meta"><span>{recipe.totalMinutes} min total</span><span>{recipe.activeMinutes > 0 ? `${recipe.activeMinutes} min active` : "Active time not specified"}</span><span>Serves {servings}</span></div>
           </div>
         </section>
 
@@ -55,6 +56,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             <section className="panel recipe-section">
               <div className="panel-head"><h2>Ingredients</h2><span className="subtle">For {servings}</span></div>
               <form method="get" className="recipe-controls">
+                  {query.version && <input type="hidden" name="version" value={query.version} />}
                   <label htmlFor="servings">Servings</label>
                   <select id="servings" name="servings" defaultValue={String(servings)}>
                     {[1, 2, 3, 4, 6].map((count) => <option key={count} value={count}>{count}</option>)}
@@ -66,11 +68,11 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                 <div className="ingredient-group" key={component.id}>
                   <h3>{component.name}</h3>
                   {component.extraYieldMilli > 0 && <p className="ingredient-hint">Includes {formatQuantity({ milli: component.extraYieldMilli, unit: component.yieldUnit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} to reserve for lunch.</p>}
-                  <ul className="ingredient-list">{component.ingredients.map((item) => <li key={item.ingredient.name}><span>{item.ingredient.name}</span><strong>{formatQuantity(item.scaled)}</strong></li>)}</ul>
+                  <ul className="ingredient-list">{component.ingredients.map((item) => <li key={item.ingredient.name}><span>{item.ingredient.name}</span><strong>{item.scaled ? formatQuantity(item.scaled) : "to taste"}</strong></li>)}</ul>
                 </div>
               ))}
               {lunchDetail && <div className="ingredient-group lunch-ingredients"><h3>For the new lunch</h3><p className="ingredient-hint">Add these to the dinner ingredients above.</p>
-                <ul className="ingredient-list">{scaledLunch.flatMap((component) => component.ingredients).map((item) => <li key={item.ingredient.name}><span>{item.ingredient.name}</span><strong>{formatQuantity(item.scaled)}</strong></li>)}</ul>
+                <ul className="ingredient-list">{scaledLunch.flatMap((component) => component.ingredients).map((item) => <li key={item.ingredient.name}><span>{item.ingredient.name}</span><strong>{item.scaled ? formatQuantity(item.scaled) : "to taste"}</strong></li>)}</ul>
               </div>}
               {recipe.role === "lunch" && incoming.length > 0 && <div className="ingredient-group"><h3>From the earlier dinner</h3>
                 {incoming.flatMap((transformation) => transformation.inputs.map((input) => <p className="ingredient-hint" key={input.id}>{formatQuantity(scaleQuantity({ milli: input.requiredMilli, unit: input.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" }, servings, recipe.baseServings))} of {transformation.sourceComponent.name.toLowerCase()} from <Link href={`/recipes/${transformation.sourceComponent.recipe.recipeKey}`}>{transformation.sourceComponent.recipe.title}</Link>.</p>))}

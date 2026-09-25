@@ -17,7 +17,7 @@ export interface UnallocatedPurchasedLine {
   category: string;
 }
 
-export function findUnallocatedPurchases(needs: GroceryNeed[], lines: Array<UnallocatedPurchasedLine & { checked: boolean }>): UnallocatedPurchasedLine[] {
+export function findUnallocatedPurchases(needs: Array<Pick<GroceryNeed, "key">>, lines: Array<UnallocatedPurchasedLine & { checked: boolean }>): UnallocatedPurchasedLine[] {
   const neededKeys = new Set(needs.map((need) => need.key));
   return lines.filter((line) => line.checked && !neededKeys.has(`${line.ingredientId}:${line.unitGroup}`))
     .map(({ ingredientId, unitGroup, name, category }) => ({ ingredientId, unitGroup, name, category }))

@@ -40,6 +40,18 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
       {shoppingError && <p className="plan-error" role="alert">{shoppingError}</p>}
       {result ? <>
         <p className="grocery-note">Recipe needs include extra dinner portions reserved for lunch and add new lunch ingredients once. Enter what you already have to see the amount still needed. A blank on-hand field means you have not checked yet; zero means you checked and have none. Optional ingredients are omitted. Bought checks stay saved when the plan changes.</p>
+        {result.unmeasured.length > 0 && <section className="panel grocery-category"><h2>Check amount</h2>
+          <p>These recipes specify the ingredient without a quantity. Decide how much you want while shopping.</p>
+          <ul>{result.unmeasured.map((item) => <li key={item.ingredientId} id={`line-${item.ingredientId}-unmeasured`}>
+            <strong>{item.name}</strong> · {item.meals.join(", ")}
+            <form action={setPurchasedAction}><input type="hidden" name="planId" value={result.plan.id} />
+              <input type="hidden" name="expectedRevision" value={result.plan.revision} />
+              <input type="hidden" name="ingredientId" value={item.ingredientId} />
+              <input type="hidden" name="unitGroup" value="unmeasured" />
+              <input type="hidden" name="checked" value={item.checked ? "0" : "1"} />
+              <button type="submit">{item.checked ? "✓ Bought · undo" : "Mark bought"}</button></form>
+          </li>)}</ul>
+        </section>}
         {categories.size ? <div className="grocery-sections">
           {[...categories].map(([category, lines]) => <section className="panel grocery-category" key={category}>
             <h2>{category}</h2>

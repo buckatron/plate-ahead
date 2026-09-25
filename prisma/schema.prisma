@@ -20,6 +20,8 @@ model Household {
   groceryLists GroceryList[]
   cookingEvents CookingEvent[]
   interactionEvents InteractionEvent[]
+  recipeEntries RecipeEntry[]
+  recipeDrafts RecipeDraft[]
 }
 
 model HouseholdPreferences {
@@ -29,6 +31,7 @@ model HouseholdPreferences {
   maxDinnerMinutes  Int    @default(60)
   varietyPreference String @default("balanced")
   exclusionsJson    String @default("[]")
+  includePrototypeRecipes Boolean @default(true)
   household         Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
 
@@ -72,6 +75,9 @@ model Recipe {
   sourceAttribution String?
   reviewStatus     String @default("draft")
   contentHash      String @default("")
+  sourceSnapshotJson String?
+  entryId          String?
+  entry            RecipeEntry? @relation(fields: [entryId], references: [id])
   createdAt        DateTime @default(now())
   tags             RecipeTag[]
   components       RecipeComponent[]
@@ -79,6 +85,37 @@ model Recipe {
   slots            PlanSlot[]
   cookingEvents    CookingEvent[]
   @@unique([recipeKey, version])
+}
+
+model RecipeEntry {
+  id String @id @default(cuid())
+  householdId String
+  recipeKey String @unique
+  origin String
+  currentRecipeId String?
+  archivedAt DateTime?
+  includeInPlanning Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  versions Recipe[]
+  drafts RecipeDraft[]
+  @@index([householdId])
+}
+
+model RecipeDraft {
+  id String @id @default(cuid())
+  householdId String
+  entryId String?
+  basedOnRecipeId String?
+  payloadJson String
+  sourceSnapshotJson String?
+  revision Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  entry RecipeEntry? @relation(fields: [entryId], references: [id])
+  @@index([householdId])
 }
 
 model RecipeTag {
@@ -112,10 +149,12 @@ model RecipeIngredient {
   id            String @id @default(cuid())
   componentId   String
   ingredientId  String
-  quantityMilli Int
+  quantityMilli Int?
   unit          String
   preparation   String?
   optional      Boolean @default(false)
+  amountKind    String @default("measured")
+  originalText  String?
   component     RecipeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
   ingredient    Ingredient @relation(fields: [ingredientId], references: [id])
 }

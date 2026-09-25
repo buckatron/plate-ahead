@@ -17,6 +17,8 @@ The primary success criterion is whether the household accepts a useful weekly p
 - Learn from both behavior and optional explicit feedback.
 - Distinguish dislike from temporary fatigue: a favorite can still need a break.
 - Reduce forgotten leftovers without making inventory maintenance another chore.
+- Write and edit household recipes, and import a recipe from a pasted website link into an editable review draft.
+- Use personal recipes for real weekly planning; the AI-generated prototype catalog is testing content, not a substitute for the household's own collection.
 
 ### Proposed starting defaults, adjustable in the product
 
@@ -45,7 +47,7 @@ The weekly plan is the main screen. A shortlist appears when replacing a meal; t
 - Barcode scanning, receipt parsing, or automatic fridge inventory.
 - Nutrition targets, medical diet advice, social features, or breakfast planning.
 - Push notifications or complex machine learning infrastructure.
-- Automatically generated cooking instructions. Start with a reviewed recipe catalog and explicit reuse pairings.
+- Automatically generated cooking instructions. Support household-written recipes and source-preserving imports alongside the prototype catalog, with explicit reuse pairings.
 - Public multi-household hosting and individual accounts. Build a local/private household prototype first; add authentication before any public release.
 
 ## 3. Proposed architecture
@@ -235,7 +237,7 @@ After cooking, actual leftover batches remain even if future slots change. Repla
 
 ## 7. Ordered implementation tasks
 
-The foundation, planning loop, and first catalog slice are implemented. Checked boxes reflect completed code; the remaining boxes are still planned.
+The foundation, planning loop, first catalog slice, and personal recipe feature are implemented. Checked boxes reflect completed code; the remaining boxes require the full browser journey and real weekly trial. Section 10 describes the personal recipe architecture and validation gates.
 
 ### Phase 1: Foundation and domain contracts
 
@@ -300,6 +302,23 @@ Acceptance: replacing a dinner never leaves an orphan lunch, overallocated compo
 
 Acceptance: cooking and consuming a linked lunch reconciles actual stock, handles shortages, and changes future recommendations appropriately.
 
+### Phase 5A: Personal recipes and recipe-link import
+
+Implement these increments in order, each usable and verified before proceeding:
+
+- [x] Add household-owned recipe identities, editable drafts, source metadata, explicit planner eligibility, and version-safe publishing; identify the existing catalog as prototype content.
+- [x] Build the shared recipe editor and manual creation flow: ingredients, ordered steps, servings, timings, meal role, save draft, review, publish, and edit as a new version.
+- [x] Add ingredient parsing and correction controls, canonical ingredient matching, and explicit handling of unmeasured or unsupported amounts in scaling and groceries.
+- [x] Integrate personal recipes into the library, detail pages, planner and swaps; add archive and a saved preference to include/exclude prototype recipes.
+- [x] Implement bounded, SSRF-protected URL fetching and Schema.org Recipe extraction into the same draft editor, with provenance, duplicate URL handling, and recoverable failures.
+- [x] Support pasted recipe text when a site cannot be imported; preserve original lines, parse ingredient candidates, and let the user organize instructions in the editor.
+- [x] Add an optional advanced editor for components and explicit dinner-to-lunch reuse mappings, without requiring it for an ordinary dinner recipe.
+- [ ] Verify manual and imported recipes through planning, shopping, cooking, feedback, editing, and history; document supported imports and remaining limitations.
+
+The manual recipe flow has been exercised in an isolated SQLite copy through publishing, dinner-to-lunch pairing, plan generation, grocery calculation, and revision history. Parser and network-address boundary tests cover representative JSON-LD and unsafe IP addresses. A live public URL import and full browser cooking cycle still need hands-on verification. The prototype catalog is distinguished by a null household recipe entry, so seeding cannot overwrite household-owned recipes.
+
+Acceptance: the household can write a recipe or paste a supported recipe URL, correct the draft, save it to its library, and use it in a weekly plan with correct groceries. Editing or archiving it never changes a historical meal. Unsupported websites and incomplete recipes have a useful recovery path.
+
 ### Phase 6: End-to-end readiness
 
 - [ ] Verify mobile layout, keyboard navigation, readable recipes, grocery checkboxes, loading, and recoverable errors.
@@ -338,3 +357,66 @@ Use fixed catalog fixtures and deterministic planner seeds for unit tests, a tem
 - Does the household feel less bored with meals and less burdened by planning?
 
 Collect a baseline during the first real use rather than inventing success targets. The first release is successful enough to expand when it reliably handles one household's weekly loop and its suggestions are worth cooking.
+
+## 10. Personal recipe authoring and URL import design
+
+### Product flow and implementation choice
+
+Use one editor and publishing pipeline for both entry points: **Write a recipe** opens a blank draft; **Import from a link** extracts a source recipe and opens a populated draft. The user can save incomplete work and return later. Publishing saves a usable version to the library; inclusion in automatic planning is a separate, visible choice with any missing requirements explained.
+
+The initial importer should use structured recipe data from the source page, without an AI service or a browser automation service. This keeps the local app inexpensive and preserves the source's wording. Schema.org provides recipe ingredients, yield, timing and instructions; instructions may be text, steps or sections. These formats are documented in [Schema.org Recipe](https://schema.org/Recipe) and [Google's recipe structured-data documentation](https://developers.google.com/search/docs/appearance/structured-data/recipe). Use an HTML parser to extract JSON-LD without executing page scripts, plus a small isolated adapter that normalizes the supported fields. Keep network retrieval, extraction, ingredient parsing and publication separate so another extractor can be added later.
+
+Do not promise that every URL can be imported. For missing structured data, blocked sites or pages requiring login, explain the outcome and offer **Paste recipe text** in the same editor. A future optional model-based extractor can propose structured fields from pasted text if this fallback proves too laborious; it is not required for the first release and must never invent missing ingredients, quantities, timings or instructions.
+
+### Shared editor and recipe readiness
+
+- Basic fields: title, optional description, dinner/lunch role, source/author when applicable, base servings, optional active time, total time, ingredient lines, ordered instruction sections/steps, and optional cuisine/technique/flavor tags. Allow adding, removing and reordering ingredient groups and steps.
+- Start with one non-reservable component for the entire recipe. Infer its internal serving yield from confirmed base servings. Ordinary recipe entry must not require knowledge of component allocation.
+- Accept freeform ingredient lines such as `2 eggs`, `1 1/2 cups flour` and `salt to taste`. Show editable structured values alongside the original text: amount, unit, ingredient, preparation and optional status. Display count units as `eggs`, `onions`, etc., rather than asking the user to enter vague `each` quantities.
+- Parse fractions, Unicode fractions, mixed numbers and common unit aliases deterministically. Flag ranges, alternatives, package quantities and ambiguous lines for review. For `2 (400 g) cans tomatoes`, retain both package and contents information; do not convert cans to mass without the stated package size. Do not silently choose between `1–2 onions` or assume what `one bunch` weighs.
+- Suggest matches to canonical ingredients and aliases, but require confirmation for ambiguous matches. Allow creation of a new ingredient with a grocery category and an appropriate unit. Preserve repeated ingredient lines and group assignments, including the same ingredient used at different steps.
+- Drafts may be incomplete. A readable library recipe requires a title, ingredients and instructions; automatic planning additionally requires confirmed positive servings, usable total time and grocery-ready ingredient lines. Unknown active time remains unknown rather than being copied from prep time. Do not impose the prototype validator's three-tag minimum or 60-minute ceiling on personal recipes; the household's time limit filters planner candidates.
+- Explicit `to taste`/`as needed` ingredients may be marked unmeasured and shown in groceries as **Check amount**, never as zero. Unsupported measurable amounts must be corrected or the recipe remains excluded from automatic planning. Unknown values must not enter quantity calculations as guessed numbers.
+- Retain original yield text such as `1 loaf` or `12 cookies`; ask for servings when the yield is not a serving count. Display the original recipe text alongside any warnings so corrections are easy to verify.
+
+### Data model and versioning changes
+
+Keep published `Recipe` rows as immutable versions, and introduce a stable library record plus a separate mutable draft. This avoids weakening the planner's quantity requirements just to save incomplete imports.
+
+| Record/change | Purpose and proposed fields |
+| --- | --- |
+| `RecipeEntry` | Stable personal identity: id/recipeKey, household owner, origin (`manual`, `url_import`), current published version id, archived timestamp, include-in-planning flag, created/updated timestamps. Bundled prototype recipes have no entry. Enforce ownership and current-version consistency in publication transactions. |
+| `RecipeDraft` | Household owner, optional entry id, based-on version id, schema-versioned editable payload and immutable import snapshot, revision, timestamps. Holds unresolved fields and raw source text without making them planner candidates. |
+| `Recipe` additions | Optional entry relationship and a version-specific import snapshot. Keep confirmed servings, required total time, content hashes, and monotonically increasing versions; zero active minutes means unspecified. |
+| Provenance snapshot | Submitted/final source URL, source canonical URL when valid, author/site attribution, import time, extraction method/version and original ingredient/yield/instruction text. Preserve only relevant recipe data, not entire pages or credentials. Manual edits retain attribution. |
+| `RecipeIngredient` / `RecipeStep` additions | Original text, ordering/group labels and an explicit amount kind (`measured` or `unmeasured`). Only explicitly unmeasured published lines may have null numeric quantities. Extend validators and consumers before allowing these values in published recipes. |
+| Household preference | `includePrototypeRecipes`, initially preserving existing behavior; expose it in the library/settings so the household can plan exclusively from its own collection. |
+
+Use the draft revision for stale-tab protection. Publishing validates, creates all version children, updates the entry's current-version pointer, and removes the draft in one transaction, so a retry cannot create another version from that draft. Draft edits never mutate a published version. Existing plan slots and cooking events continue referencing their original version. Archive hides a recipe from new suggestions without deleting history. Copying a bundled recipe into a household-owned entry remains a possible future refinement.
+
+Refactor the current recipe repository and catalog loader to select accessible, unarchived, explicitly eligible current versions, rather than selecting the highest `reviewed` row alone. User confirmation is not a claim of kitchen testing or a food-safety review; record provenance and readiness separately. Ensure seeding updates only bundled entries and cannot overwrite personal recipes. Include new records in backup/restore and any future household reset policy.
+
+### Import pipeline and boundaries
+
+1. Validate the submitted URL and fetch a bounded HTML response on the server. Return specific errors for invalid links, timeouts, oversized pages, blocked access, missing recipes and invalid structured data. Keep the pasted URL available for correction/retry.
+2. Inspect JSON-LD scripts for Recipe objects, including arrays, nested objects and `@graph` with bounded traversal. If a page contains several recipes, present titles for selection. Support type arrays, text ingredients and supported structured ingredient values; preserve unknown forms as review items. Normalize ordered HowToStep/HowToSection instructions into editor sections without losing order.
+3. Decode text safely and map supported title, description, author, ingredients, instructions, yield and ISO duration fields into the draft. Do not mistake elapsed cook/prep duration for active labor. Missing fields become visible questions, not synthesized content.
+4. Suggest ingredient normalization and tags, display source attribution and unresolved fields, and save the editable draft. Nothing enters planning until the user confirms it and readiness checks pass.
+5. Compare a normalized source URL against household entries. If already imported, explain that it is in the library; edit that version to update it. Strip fragments and known tracking parameters only; preserve meaningful query parameters. A changed URL import never silently overwrites a prior recipe. Content fingerprint comparison and deliberate separate copies remain future refinements.
+
+Treat pasted URLs as untrusted network destinations. Follow [OWASP's SSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html): permit HTTP(S) only, reject embedded credentials and non-public destinations, validate IPv4/IPv6 and every DNS result, and prevent DNS rebinding by connecting only to validated addresses. Disable automatic redirects; validate and resolve each permitted hop. Set explicit request/decompression size limits, timeouts and redirect counts. Do not forward cookies or authorization. Never execute downloaded scripts or render source HTML directly. Use a bounded fetch layer supported by the Node runtime, with tests proving these protections before enabling URL imports. Do not bypass login or access barriers. Initial import does not fetch or host remote images.
+
+### Planner, groceries and leftover integration
+
+Personal recipes participate in the existing ranking and feedback rules by stable recipe key. Missing optional tags contribute no invented variety evidence. Show useful constraints when disabling the prototype catalog leaves too few dinners or no compatible lunches; do not silently re-enable it.
+
+An ordinary imported dinner is usable without a lunch transformation. Reuse requires a deliberate advanced step: identify a reservable source component, its yield and preparation state, select a lunch recipe/component and required amount, and provide storage guidance with a source. Do not infer reuse compatibility or safe storage from scraped text. Update transformations to bind compatible published component/version identities; editing either recipe requires revalidation for new plans, while existing plans retain their original allocations. This addresses the current mix of a version-specific source component and a target recipe key.
+
+Extend grocery aggregation, scaling and recipe rendering together for unmeasured lines. Keep them visible with meal contributions and allow shopping checks without presenting an invented numeric total. Draft warnings, library readiness and planner exclusion reasons should share one validator so a recipe cannot appear ready in the editor but fail later in planning.
+
+### Verification and delivery gates
+
+- Manual entry: save/reopen incomplete work, publish a quantified dinner, include it in a plan, verify scaled groceries, cook it and save feedback. Confirm a second edit leaves the first plan and cooking history unchanged; exercise stale edits and publish retries.
+- Import fixtures: single and multiple recipes, nested JSON-LD, instruction sections, fractions, package sizes, ranges, unmeasured ingredients, non-serving yields, missing fields, malformed markup, duplicate URLs and changed source content. Use small authored fixtures for automated tests and a few live sites for a manual compatibility check; tests must not depend on live websites.
+- Network boundary: blocked IPv4/IPv6 destinations, DNS changes, redirect to a private address, timeout, excessive response/decompression size and malicious markup. Reject unauthorized cross-household draft and recipe mutations.
+- Integration: a personal-only library, too few eligible recipes, unknown optional tags/times, preservation of prototype seed data and user edits across reseeding, archive with historical references, and edited reuse pairings. Run the complete household journey with at least one manually written and one imported recipe before the real weekly trial.

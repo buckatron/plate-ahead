@@ -16,6 +16,16 @@ Once the source dinner is cooked, **Mark lunch eaten** records the planned lunch
 
 The home-page sidebar now shows linked lunches still on accepted plans and confirmed saved food beyond any outstanding lunch reservation. It includes food from earlier weeks so an unused batch is not hidden when you generate a new plan. Stored dates are memory aids, not food-safety advice.
 
+## Add your own recipes
+
+Open **Recipes → Add a recipe** to write a recipe or import a public recipe link. Link import reads the site's Schema.org recipe data into an editable draft. Save incomplete drafts and publish after confirming servings, total time, ingredient amounts, and steps. If a site blocks import or has no structured recipe data, start a manual draft and paste its ingredient and instruction text there. Imports do not execute page scripts or fetch images. The original source URL, author, and extracted recipe fields are kept with published versions.
+
+The ingredient review lists parsed amounts and suggests grocery matches. Choose a category for new ingredients. `Salt to taste` and similar lines remain visible as **Check amount** on groceries, with a shopping check instead of a fabricated quantity. The parser assumes a 240 mL cup, a 15 mL tablespoon, and a 5 mL teaspoon; check imported measures against the source, especially for recipes using regional cup sizes. Ranges, package sizes, and ambiguous lines need manual correction.
+
+Published personal recipes appear in the library and can be used by the planner and dinner swaps. **Show only my recipes** removes the prototype catalog from new suggestions. You can pause a personal recipe in suggestions or archive it without changing meals already planned or cooked. Editing creates a new version; historical plans link to the version they used. To turn reserved dinner food into lunch, mark a recipe component reservable with sourced storage guidance, write a separate lunch recipe, and use **Link dinner to lunch**. Separate components let you scale only the reserved part.
+
+This is still a private, single-household app. Recipe import works best on pages with Schema.org Recipe JSON-LD; login-only pages, blocked sites, and arbitrary page layouts need manual paste. Source ingredient wording and storage advice require your review before cooking.
+
 ## Run locally
 
 Requires Node.js 20.19+, 22.12+, or 24+. Run these commands from the project directory.

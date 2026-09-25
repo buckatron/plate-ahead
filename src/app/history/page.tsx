@@ -39,7 +39,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
           event.feedback?.effort && efforts[event.feedback.effort],
           event.feedback?.leftovers && leftovers[event.feedback.leftovers]].filter(Boolean);
         return <article className="panel history-card" id={`event-${event.id}`} key={event.id}>
-          <div className="panel-head"><h2><Link href={`/recipes/${event.recipe.recipeKey}`}>{event.recipe.title}</Link></h2>
+          <div className="panel-head"><h2><Link href={`/recipes/${event.recipe.recipeKey}?version=${event.recipe.version}`}>{event.recipe.title}</Link></h2>
             <span className="subtle">{event.cookedAt.toLocaleDateString("en-US", { timeZone: household?.timezone ?? "UTC",
               month: "short", day: "numeric", year: "numeric" })}</span></div>
           <p>{answers.length ? answers.join(" · ") : "No feedback yet."}</p>

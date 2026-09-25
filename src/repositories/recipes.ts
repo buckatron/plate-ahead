@@ -1,16 +1,18 @@
 import "server-only";
 
 import { prisma } from "@/services/prisma";
+import { recipeVisibility } from "./recipe-visibility";
 
-export async function listDinnerRecipes() {
+export async function listDinnerRecipes(householdId = "home") {
+  const where = await recipeVisibility(householdId, false);
   const [allDinners, transformations, lunches] = await Promise.all([
     prisma.recipe.findMany({
-      where: { role: "dinner", reviewStatus: "reviewed" },
+      where: { AND: [where, { role: "dinner" }] },
       orderBy: [{ title: "asc" }, { version: "desc" }],
       include: { tags: true },
     }),
     prisma.transformation.findMany({ include: { sourceComponent: true } }),
-    prisma.recipe.findMany({ where: { role: "lunch", reviewStatus: "reviewed" }, select: { recipeKey: true, title: true, version: true } }),
+    prisma.recipe.findMany({ where: { AND: [where, { role: "lunch" }] }, select: { recipeKey: true, title: true, version: true } }),
   ]);
   const latest = new Map<string, (typeof allDinners)[number]>();
   for (const recipe of allDinners) if (!latest.has(recipe.recipeKey)) latest.set(recipe.recipeKey, recipe);
@@ -24,9 +26,12 @@ export async function listDinnerRecipes() {
   }));
 }
 
-export async function getRecipe(recipeKey: string) {
+export async function getRecipe(recipeKey: string, householdId = "home", version?: number) {
+  const entry = version ? null : await prisma.recipeEntry.findFirst({ where: { recipeKey, householdId },
+    select: { currentRecipeId: true } });
   const recipe = await prisma.recipe.findFirst({
-    where: { recipeKey, reviewStatus: "reviewed" },
+    where: { recipeKey, version, id: entry?.currentRecipeId ?? undefined,
+      reviewStatus: "reviewed", OR: [{ entryId: null }, { entry: { householdId } }] },
     orderBy: { version: "desc" },
     include: {
       tags: true,
@@ -47,13 +52,15 @@ export async function getRecipe(recipeKey: string) {
     include: { inputs: true, sourceComponent: { include: { recipe: true } } },
   });
   const targetKeys = outgoing.map(({ transformation }) => transformation.targetRecipeKey);
-  const targetRecipes = await prisma.recipe.findMany({ where: { recipeKey: { in: targetKeys }, reviewStatus: "reviewed" }, orderBy: { version: "desc" } });
-  const targetByKey = new Map<string, (typeof targetRecipes)[number]>();
-  for (const target of targetRecipes) if (!targetByKey.has(target.recipeKey)) targetByKey.set(target.recipeKey, target);
+  const targetRecipes = await prisma.recipe.findMany({ where: { recipeKey: { in: targetKeys }, reviewStatus: "reviewed",
+    OR: [{ entryId: null }, { entry: { householdId } }] }, orderBy: { version: "desc" },
+    include: { components: { select: { id: true } } } });
 
   return {
     recipe,
-    outgoing: outgoing.map(({ component, transformation }) => ({ component, transformation, target: targetByKey.get(transformation.targetRecipeKey) })).filter((item) => item.target),
+    outgoing: outgoing.map(({ component, transformation }) => ({ component, transformation,
+      target: targetRecipes.find((candidate) => candidate.recipeKey === transformation.targetRecipeKey &&
+        transformation.inputs.every((input) => candidate.components.some((item) => item.id === input.targetComponentId))) })).filter((item) => item.target),
     incoming,
   };
 }

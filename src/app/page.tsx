@@ -110,7 +110,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     <div>
                       {slot.status === "cancelled" ? <strong>Lunch cancelled</strong> :
                         slot.status === "skipped" ? <strong>Dinner skipped</strong> :
-                        slot.recipe ? <Link href={`/recipes/${slot.recipe.recipeKey}`}>{slot.recipe.title}</Link> :
+                        slot.recipe ? <Link href={`/recipes/${slot.recipe.recipeKey}?version=${slot.recipe.version}`}>{slot.recipe.title}</Link> :
                         <strong>{slot.slotType === "eat_out" ? "Eat out" : "Flexible night"}</strong>}
                       {slot.reason && <p>{slot.reason}</p>}
                       {slot.status === "needs_attention" && <p className="meal-warning" role="status">Lunch needs attention: supply the missing food separately or cancel it.</p>}

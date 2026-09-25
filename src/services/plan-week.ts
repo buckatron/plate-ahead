@@ -6,6 +6,7 @@ import { validatePlanDraft, type PlanSlotDraft } from "@/domain/planning/plan";
 import type { ComponentUse } from "@/domain/meals/allocations";
 import { scaleQuantity, unitSchema } from "@/domain/meals/quantity";
 import { findHousehold } from "@/repositories/households";
+import { recipeVisibility } from "@/repositories/recipe-visibility";
 import { prisma } from "@/services/prisma";
 import { getCookingSignals } from "@/services/cooking-history";
 
@@ -29,7 +30,7 @@ export async function createGeneratedWeek(householdId: string, now = new Date(),
   }
   const generationIndex = (previous?.generationIndex ?? -1) + 1;
   const allRecipes = await prisma.recipe.findMany({
-    where: { reviewStatus: "reviewed" },
+    where: await recipeVisibility(householdId),
     include: { tags: true, components: { include: { ingredients: { include: { ingredient: true } }, sourceTransformations: { include: { inputs: true } } } } },
     orderBy: [{ recipeKey: "asc" }, { version: "desc" }],
   });

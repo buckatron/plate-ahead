@@ -9,7 +9,7 @@ const lineFormSchema = z.object({
   planId: z.uuid(),
   expectedRevision: z.coerce.number().int().positive(),
   ingredientId: z.string().regex(/^[a-z0-9-]+$/),
-  unitGroup: z.enum(["mass", "volume", "count", "portion"]),
+  unitGroup: z.enum(["mass", "volume", "count", "portion", "unmeasured"]),
 });
 
 function destination(planId: string | null, error: string | null, ingredientId?: string, unitGroup?: string) {
