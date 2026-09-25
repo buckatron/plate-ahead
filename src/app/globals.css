@@ -94,6 +94,11 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .cooking-checkin label { display: grid; gap: 4px; color: #3f5f49; font-weight: 700; }
 .cooking-checkin input[type="number"] { width: 110px; border: 1px solid #b9cbb9; border-radius: 6px; padding: 6px; background: #fffefa; color: #223128; font: inherit; }
 .cooking-checkin button { width: max-content; }
+.meal-feedback form { display: grid; gap: 9px; max-width: 260px; padding: 5px 0; }
+.meal-feedback label { display: grid; gap: 4px; color: #3f5f49; font-weight: 700; }
+.meal-feedback select { width: 100%; border: 1px solid #b9cbb9; border-radius: 6px; padding: 6px; background: #fffefa; color: #223128; font: inherit; }
+.meal-feedback select:focus-visible { outline: 2px solid #397254; outline-offset: 2px; }
+.meal-feedback button { width: max-content; }
 .meal-warning { color: #9a512f !important; font-weight: 700; }
 .cooked-summary { color: #397254 !important; font-weight: 700; }
 .batch-card { margin-top: 8px; border-left: 3px solid #a9c5a9; padding: 5px 0 5px 10px; font-size: 11px; color: #4b6652; }

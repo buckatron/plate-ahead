@@ -230,7 +230,18 @@ model CookingEvent {
   slot           PlanSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
   recipe         Recipe @relation(fields: [recipeId], references: [id], onDelete: Restrict)
   batches        LeftoverBatch[]
+  feedback       MealFeedback?
   @@unique([householdId, requestId])
+}
+
+model MealFeedback {
+  cookingEventId String @id
+  reaction       String?
+  effort         String?
+  leftovers      String?
+  revision       Int @default(1)
+  updatedAt      DateTime @updatedAt
+  cookingEvent   CookingEvent @relation(fields: [cookingEventId], references: [id], onDelete: Cascade)
 }
 
 model LeftoverBatch {

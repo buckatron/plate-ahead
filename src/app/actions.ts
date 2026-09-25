@@ -13,6 +13,7 @@ import { PlanRepairError, repairPlan } from "@/services/repair-plan";
 import { CookingError, recordCooking } from "@/services/record-cooking";
 import { consumeLunch, LunchConsumptionError } from "@/services/consume-lunch";
 import { LeftoverActionError, manageLeftoverBatch } from "@/services/manage-leftovers";
+import { MealFeedbackError, saveMealFeedback } from "@/services/save-meal-feedback";
 
 export type SettingsActionState = { status: "idle" | "saved" | "error"; message: string };
 
@@ -140,6 +141,28 @@ export async function manageLeftoversAction(formData: FormData) {
   const params = new URLSearchParams({ planId: input.data.planId });
   params.set(error ? "batchError" : "batchSaved", error ?? input.data.change);
   redirect(`/?${params}#slot-${input.data.slotId}`);
+}
+
+export async function saveMealFeedbackAction(formData: FormData) {
+  const identity = z.object({ planId: z.uuid(), slotId: z.uuid(), cookingEventId: z.string().min(1).max(100),
+    expectedRevision: z.coerce.number().int().nonnegative() }).safeParse(Object.fromEntries(formData));
+  const reaction = z.enum(["loved", "good", "not_again", "break"]).nullable().safeParse(formData.get("reaction") || null);
+  const effort = z.enum(["easy", "about_right", "too_much"]).nullable().safeParse(formData.get("effort") || null);
+  const leftovers = z.enum(["appealing", "okay", "not_appealing"]).nullable().safeParse(formData.get("leftovers") || null);
+  if (!identity.success || !reaction.success || !effort.success || !leftovers.success) {
+    redirect("/?feedbackError=Refresh%20the%20meal%20and%20try%20again.");
+  }
+  let error: string | null = null;
+  try {
+    await saveMealFeedback({ householdId: "home", ...identity.data,
+      reaction: reaction.data, effort: effort.data, leftovers: leftovers.data });
+    revalidatePath("/");
+  } catch (cause) {
+    error = cause instanceof MealFeedbackError ? cause.message : "Could not save feedback. Please try again.";
+  }
+  const params = new URLSearchParams({ planId: identity.data.planId });
+  params.set(error ? "feedbackError" : "feedbackSaved", error ?? "1");
+  redirect(`/?${params}#slot-${identity.data.slotId}`);
 }
 
 export async function acceptPlanAction(formData: FormData) {

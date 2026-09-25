@@ -4,11 +4,13 @@ A private meal planning prototype for a household of two. The app is being built
 
 ## Current checkpoint
 
-The Next.js and local SQLite prototype has twelve reviewed dinners and four linked lunches. Browse and scale recipes under `/recipes`, set preferences on the home page, generate a draft, and accept it before shopping. New drafts can preserve dinners marked **Keep in next draft**; conflicts with changed settings are explained. The **Groceries** page combines meal ingredients, on-hand review, and bought checks, including ingredients purchased for meals later removed from the plan. Dinner alternatives preview recipe, lunch, timing, and grocery changes before swapping. Plan revisions reject stale tabs. Recipes have structural checks and food safety references but have not been kitchen-tested; purchase quantities and meal feedback are not tracked yet.
+The Next.js and local SQLite prototype has twelve reviewed dinners and four linked lunches. Browse and scale recipes under `/recipes`, set preferences on the home page, generate a draft, and accept it before shopping. New drafts can preserve dinners marked **Keep in next draft**; conflicts with changed settings are explained. The **Groceries** page combines meal ingredients, on-hand review, and bought checks, including ingredients purchased for meals later removed from the plan. Dinner alternatives preview recipe, lunch, timing, and grocery changes before swapping. Plan revisions reject stale tabs. Recipes have structural checks and food safety references but have not been kitchen-tested; purchase quantities are not tracked yet.
 
 On the week page, **Skip this dinner** opens that night and cancels its linked lunch; **Cancel this lunch** removes the extra dinner portion reservation without changing dinner itself. Both recalculate grocery needs and reject stale tabs. These are planning edits, not cooking or leftover check-ins.
 
 On an accepted week, **Mark dinner cooked** records servings eaten and the reusable amount actually saved for each component. This creates leftover batches only for confirmed positive amounts. A shortfall flags the linked lunch for attention. Once a dinner is recorded, that accepted week cannot be replaced by another draft.
+
+After recording dinner, **How was this meal?** lets you optionally save or edit whether you would cook it again, how the effort felt, and whether its leftovers sounded appealing. The answers stay attached to the cooked meal, not an uncooked plan. They are collected now but do not yet influence recommendations or create recipe cooldowns.
 
 Once the source dinner is cooked, **Mark lunch eaten** records the planned lunch servings and deducts its reserved quantity from the confirmed batch. The remaining balance is calculated from that batch and its movements, and duplicate submissions cannot consume it twice. You can mark a batch frozen or thawed, record a partial or full discard, or correct a mistaken remaining amount (including zero). These changes are recorded in the movement ledger; they do not rewrite the original cooking entry. Linked lunches are flagged when too little remains and restored when a correction supplies enough. Partial lunches are still future work.
 
@@ -63,6 +65,8 @@ The lunch consumption update also adds a migration. After pulling it, use the sa
 The batch freeze/discard update adds one more migration. After pulling, run `npm run db:deploy`, `npm run db:generate`, then restart `npm run dev`; do not reinstall packages.
 
 The stock correction update adds a migration too. After pulling, stop the app, run `npm run db:deploy` and `npm run db:generate`, then restart with `npm run dev`. No package reinstall is needed.
+
+The meal feedback update also adds a migration. Use the same deploy, generate, and restart sequence after pulling; no package reinstall is needed.
 
 The local SQLite runtime uses Prisma’s official `@prisma/adapter-better-sqlite3`, which includes a native `better-sqlite3` binary. The first install can pause while npm downloads or builds that binary; later installs reuse npm’s cache. The repository `.npmrc` enables offline preference and disables audit/funding network calls so startup is not delayed by unrelated registry work. npm may still print `prebuild-install` and ESLint deprecation notices from upstream packages; they are transitive/toolchain notices and do not indicate a Misewell runtime error.
 
