@@ -89,6 +89,11 @@ describe("personal recipe persistence", () => {
       servings: 2, totalMinutes: 15, ingredientLines: ["2 eggs"], steps: ["Fry eggs."],
       origin: "url_import", sourceUrl: "https://recipes.example/eggs", sourceAttribution: "Test kitchen" });
     const importedKey = await recipes.publishDraft(householdId, imported.id, imported.revision);
+    const importedVersion = await prisma.recipe.findFirstOrThrow({ where: { recipeKey: importedKey },
+      include: { components: { include: { ingredients: true } } } });
+    // Simulate a recipe published before textual ranges were rejected by the parser.
+    await prisma.recipeIngredient.update({ where: { id: importedVersion.components[0].ingredients[0].id },
+      data: { originalText: "2 to 3 eggs" } });
 
     const { createGeneratedWeek } = await import("../../src/services/plan-week");
     const { getGroceryNeeds, saveGroceryOnHand, setGroceryPurchased } = await import("../../src/services/grocery-needs");
@@ -104,6 +109,8 @@ describe("personal recipe persistence", () => {
     expect(groceries?.needs.map((need) => need.name).sort()).toEqual(["eggs", "rice", "tomatoes"]);
     const eggs = groceries!.needs.find((need) => need.name === "eggs")!;
     expect(eggs.quantity.milli).toBe(2000);
+    expect(groceries?.reviewLines).toEqual([{ recipeKey: importedKey, recipeTitle: "Crispy eggs",
+      version: 1, line: "2 to 3 eggs" }]);
     await saveGroceryOnHand({ householdId, planId, expectedRevision: plan.revision,
       ingredientId: eggs.ingredientId, unitGroup: "count", rawAmount: "1" });
     await setGroceryPurchased({ householdId, planId, expectedRevision: plan.revision,

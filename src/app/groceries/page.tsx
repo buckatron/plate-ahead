@@ -40,6 +40,13 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
       {shoppingError && <p className="plan-error" role="alert">{shoppingError}</p>}
       {result ? <>
         <p className="grocery-note">Recipe needs include extra dinner portions reserved for lunch and add new lunch ingredients once. Enter what you already have to see the amount still needed. A blank on-hand field means you have not checked yet; zero means you checked and have none. Optional ingredients are omitted. Bought checks stay saved when the plan changes.</p>
+        {result.reviewLines.length > 0 && <div className="recipe-review" role="alert">
+          <strong>Some saved recipe amounts need review before shopping.</strong>
+          <p>These lines contain a range, alternative, or optional amount. Grocery quantities based on them may be inaccurate:</p>
+          <ul>{result.reviewLines.map((item) => <li key={`${item.recipeKey}:${item.version}:${item.line}`}>
+            <Link href={`/recipes/${item.recipeKey}?version=${item.version}`}>{item.recipeTitle}</Link>: {item.line}
+          </li>)}</ul>
+        </div>}
         {result.unmeasured.length > 0 && <section className="panel grocery-category"><h2>Check amount</h2>
           <p>These recipes specify the ingredient without a quantity. Decide how much you want while shopping.</p>
           <ul>{result.unmeasured.map((item) => <li key={item.ingredientId} id={`line-${item.ingredientId}-unmeasured`}>

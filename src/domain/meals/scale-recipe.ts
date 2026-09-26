@@ -7,7 +7,7 @@ export interface ScalableRecipe {
     name: string;
     baseYieldMilli: number;
     yieldUnit: string;
-    ingredients: Array<{ quantityMilli: number | null; unit: string; ingredient: { name: string } }>;
+    ingredients: Array<{ id?: string; quantityMilli: number | null; unit: string; ingredient: { name: string } }>;
   }>;
 }
 
@@ -46,4 +46,9 @@ export function formatQuantity(quantity: Quantity): string {
     ? Math.ceil(amount * 4) / 4
     : Math.ceil(amount);
   return `${rounded} ${quantity.unit}`;
+}
+
+// Recipe ingredient names already supply the count noun (for example, "eggs").
+export function formatIngredientAmount(quantity: Quantity): string {
+  return quantity.unit === "each" ? String(Math.ceil(quantity.milli / 250) / 4) : formatQuantity(quantity);
 }

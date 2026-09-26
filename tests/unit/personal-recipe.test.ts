@@ -11,6 +11,10 @@ describe("personal recipe ingredients", () => {
 
   it("requires review for amounts that cannot be shopped safely", () => {
     expect(parseIngredientLine("1-2 onions")).toHaveProperty("error");
+    expect(parseIngredientLine("3 to 4 cups vegetable broth")).toMatchObject({ kind: "error", error: "Choose one amount from this range." });
+    expect(parseIngredientLine("1½–2 cups broth")).toHaveProperty("error");
+    expect(parseIngredientLine("2 tablespoons butter or olive oil")).toMatchObject({ kind: "error", error: "Choose one ingredient from this alternative." });
+    expect(parseIngredientLine("2 tablespoons lemon juice, plus more to taste")).toHaveProperty("error");
     expect(parseIngredientLine("2 (400 g) cans tomatoes")).toHaveProperty("error");
     expect(parseIngredientLine("salt to taste")).toMatchObject({ kind: "unmeasured", name: "salt" });
     expect(parseIngredientLine("1 bunch parsley")).toHaveProperty("error");

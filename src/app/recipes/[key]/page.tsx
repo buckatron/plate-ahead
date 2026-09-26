@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { decodeRecipeText } from "@/domain/meals/recipe-jsonld";
+import { parseIngredientLine } from "@/domain/meals/personal-recipe";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { scaleQuantity } from "@/domain/meals/quantity";
-import { formatQuantity, scaleRecipe } from "@/domain/meals/scale-recipe";
+import { formatIngredientAmount, formatQuantity, scaleRecipe } from "@/domain/meals/scale-recipe";
 import { getRecipe } from "@/repositories/recipes";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,8 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   const scaled = scaleRecipe(recipe, servings, extraByComponent);
   const scaledLunch = lunchDetail ? scaleRecipe(lunchDetail.recipe, servings) : [];
   const cuisine = recipe.tags.find((tag) => tag.dimension === "cuisine")?.value ?? recipe.role;
+  const reviewLines = recipe.entryId ? recipe.components.flatMap((component) => component.ingredients.flatMap((ingredient) =>
+    ingredient.originalText && parseIngredientLine(ingredient.originalText).kind === "error" ? [ingredient.originalText] : [])) : [];
 
   return (
     <main className="page">
@@ -51,6 +54,12 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             <div className="recipe-meta"><span>{recipe.totalMinutes} min total</span><span>{recipe.activeMinutes > 0 ? `${recipe.activeMinutes} min active` : "Active time not specified"}</span><span>Serves {servings}</span></div>
           </div>
         </section>
+
+        {reviewLines.length > 0 && <div className="recipe-review" role="alert">
+          <strong>Check these ingredient amounts before shopping or cooking.</strong>
+          <p>These saved lines may include a range, an alternative, or an optional amount. Edit this recipe from the library to choose clear amounts:</p>
+          <ul>{reviewLines.map((line, index) => <li key={`${index}:${line}`}>{line}</li>)}</ul>
+        </div>}
 
         <div className="recipe-layout">
           <div className="recipe-main">
@@ -69,11 +78,12 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                 <div className="ingredient-group" key={component.id}>
                   <h3>{component.name}</h3>
                   {component.extraYieldMilli > 0 && <p className="ingredient-hint">Includes {formatQuantity({ milli: component.extraYieldMilli, unit: component.yieldUnit as "g" | "kg" | "ml" | "l" | "each" | "portion" })} to reserve for lunch.</p>}
-                  <ul className="ingredient-list">{component.ingredients.map((item) => <li key={item.ingredient.name}><span>{item.ingredient.name}</span><strong>{item.scaled ? formatQuantity(item.scaled) : "to taste"}</strong></li>)}</ul>
+                  <ul className="ingredient-list">{component.ingredients.map((item, index) => <li key={item.id ?? index}><span>{item.ingredient.name}</span><strong>{item.scaled ? formatIngredientAmount(item.scaled) : "to taste"}</strong></li>)}</ul>
                 </div>
               ))}
               {lunchDetail && <div className="ingredient-group lunch-ingredients"><h3>For the new lunch</h3><p className="ingredient-hint">Add these to the dinner ingredients above.</p>
-                <ul className="ingredient-list">{scaledLunch.flatMap((component) => component.ingredients).map((item) => <li key={item.ingredient.name}><span>{item.ingredient.name}</span><strong>{item.scaled ? formatQuantity(item.scaled) : "to taste"}</strong></li>)}</ul>
+                <ul className="ingredient-list">{scaledLunch.flatMap((component) => component.ingredients.map((item, index) =>
+                  <li key={item.id ?? `${component.id}:${index}`}><span>{item.ingredient.name}</span><strong>{item.scaled ? formatIngredientAmount(item.scaled) : "to taste"}</strong></li>))}</ul>
               </div>}
               {recipe.role === "lunch" && incoming.length > 0 && <div className="ingredient-group"><h3>From the earlier dinner</h3>
                 {incoming.flatMap((transformation) => transformation.inputs.map((input) => <p className="ingredient-hint" key={input.id}>{formatQuantity(scaleQuantity({ milli: input.requiredMilli, unit: input.unit as "g" | "kg" | "ml" | "l" | "each" | "portion" }, servings, recipe.baseServings))} of {transformation.sourceComponent.name.toLowerCase()} from <Link href={`/recipes/${transformation.sourceComponent.recipe.recipeKey}`}>{transformation.sourceComponent.recipe.title}</Link>.</p>))}

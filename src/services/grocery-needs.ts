@@ -1,6 +1,7 @@
 import "server-only";
 
 import { aggregateGroceryNeeds, unmeasuredGroceryNeeds, type GroceryComponent } from "@/domain/meals/groceries";
+import { parseIngredientLine } from "@/domain/meals/personal-recipe";
 import { findUnallocatedPurchases, parseOnHandAmount, reviewGroceryNeed } from "@/domain/meals/grocery-review";
 import { toBaseQuantity, unitSchema } from "@/domain/meals/quantity";
 import { prisma } from "@/services/prisma";
@@ -18,11 +19,18 @@ export async function getGroceryNeeds(householdId: string, planId: string) {
   if (!plan) return null;
 
   const components: GroceryComponent[] = [];
+  const reviewLines = new Map<string, { recipeKey: string; recipeTitle: string; version: number; line: string }>();
   for (const slot of plan.slots) {
     if (!["planned", "needs_attention", "cooked", "eaten"].includes(slot.status) || !slot.recipe) continue;
     for (const planned of slot.components) {
       const source = planned.recipeComponent;
       if (source.recipeId !== slot.recipeId) throw new Error("A planned component does not match its recipe.");
+      if (slot.recipe.entryId) for (const item of source.ingredients) {
+        if (item.originalText && parseIngredientLine(item.originalText).kind === "error") {
+          reviewLines.set(`${slot.recipeId}:${item.originalText}`, { recipeKey: slot.recipe.recipeKey,
+            recipeTitle: slot.recipe.title, version: slot.recipe.version, line: item.originalText });
+        }
+      }
       components.push({
         slotId: slot.id, localDate: slot.localDate,
         mealKind: slot.mealKind === "lunch" ? "lunch" : "dinner", recipeTitle: slot.recipe.title,
@@ -42,6 +50,7 @@ export async function getGroceryNeeds(householdId: string, planId: string) {
   const needs = aggregateGroceryNeeds(components);
   const unmeasured = unmeasuredGroceryNeeds(components);
   return { plan: { id: plan.id, weekStart: plan.weekStart, state: plan.state, revision: plan.revision },
+    reviewLines: [...reviewLines.values()],
     unmeasured: unmeasured.map((item) => ({ ...item, checked: savedLines.get(`${item.ingredientId}:unmeasured`)?.checked ?? false })),
     needs: needs.map((need) => reviewGroceryNeed(need, savedLines.get(need.key))),
     unallocatedPurchased: findUnallocatedPurchases([...needs, ...unmeasured.map((item) => ({

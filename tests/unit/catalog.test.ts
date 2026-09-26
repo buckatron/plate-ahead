@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { recipes, transformations } from "../../src/data/catalog";
 import { asMilli, validateCatalog } from "../../src/data/validate-catalog";
-import { scaleRecipe } from "../../src/domain/meals/scale-recipe";
+import { formatIngredientAmount, scaleRecipe } from "../../src/domain/meals/scale-recipe";
 
 describe("recipe catalog", () => {
+  it("shows count ingredients beside their names without the vague unit each", () => {
+    expect(formatIngredientAmount({ milli: 2_000, unit: "each" })).toBe("2");
+    expect(formatIngredientAmount({ milli: 1_250, unit: "each" })).toBe("1.25");
+    expect(formatIngredientAmount({ milli: 15_000, unit: "ml" })).toBe("15 ml");
+  });
   it("contains complete, compatible recipes and transformations", () => {
     expect(() => validateCatalog()).not.toThrow();
     expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(24);

@@ -88,12 +88,18 @@ export type ParsedIngredient = { kind: "measured"; original: string; name: strin
 export function parseIngredientLine(original: string): ParsedIngredient | { kind: "error"; original: string; error: string } {
   const raw = original.trim().replace(/[½⅓⅔¼¾⅛]/g, (part) => ` ${fractions[part]}`).trim();
   if (!raw) return { kind: "error", original, error: "Enter an ingredient." };
+  if (/^\d+(?:\.\d+|\/\d+)?(?:\s+\d+\/\d+)?\s*(?:[-–—]|to|or)\s*\d/i.test(raw)) {
+    return { kind: "error", original, error: "Choose one amount from this range." };
+  }
+  if (/\bor\b/i.test(raw)) return { kind: "error", original, error: "Choose one ingredient from this alternative." };
+  if (/^\d/.test(raw) && /\b(to taste|as needed)\b/i.test(raw)) {
+    return { kind: "error", original, error: "Separate the measured amount from any optional amount to taste." };
+  }
   if (/\b(to taste|as needed)\b/i.test(raw)) {
     const name = raw.replace(/,?\s*(to taste|as needed)\b/ig, "").trim();
     return name ? { kind: "unmeasured", original, name, preparation: "to taste" } :
       { kind: "error", original, error: "Add the ingredient name." };
   }
-  if (/\d\s*[–-]\s*\d/.test(raw)) return { kind: "error", original, error: "Choose one amount from this range." };
   if (/\([^)]*\d[^)]*\)\s*(?:cans?|jars?|packages?|bags?)\b/i.test(raw)) {
     return { kind: "error", original, error: "Use the stated package contents as a measured amount, such as 800 g tomatoes." };
   }
