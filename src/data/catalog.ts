@@ -1,6 +1,7 @@
 import type { Unit } from "@/domain/meals/quantity";
 import { extraRecipes, extraTransformations } from "./catalog-extra";
 import { sourcedRecipes } from "./catalog-sourced";
+import { additionalSourcedRecipes } from "./catalog-sourced-more";
 import { replaceLegacyRecipes } from "./catalog-replacements";
 
 export type CatalogAmount = { amount: number; unit: Unit };
@@ -152,6 +153,11 @@ export const ingredients: CatalogIngredient[] = [
   { key: "green-chiles", name: "Canned green chiles", category: "Canned goods", defaultUnit: "g" },
   { key: "bbq-sauce", name: "Barbecue sauce", category: "Pantry", defaultUnit: "g" },
   { key: "mint", name: "Fresh mint", category: "Produce", defaultUnit: "g" },
+  { key: "heavy-cream", name: "Heavy cream", category: "Dairy", defaultUnit: "ml" },
+  { key: "corn", name: "Corn kernels", category: "Frozen", defaultUnit: "g" },
+  { key: "jalapeno", name: "Jalapeño", category: "Produce", defaultUnit: "each" },
+  { key: "ground-coriander", name: "Ground coriander", category: "Pantry", defaultUnit: "g" },
+  { key: "cod", name: "Cod fillets", category: "Meat & seafood", defaultUnit: "g" },
 ];
 
 const legacyRecipes: CatalogRecipe[] = [
@@ -383,7 +389,7 @@ const legacyRecipes: CatalogRecipe[] = [
   },
 ];
 
-export const recipes: CatalogRecipe[] = [...sourcedRecipes, ...replaceLegacyRecipes(legacyRecipes, ingredients)];
+export const recipes: CatalogRecipe[] = [...sourcedRecipes, ...additionalSourcedRecipes, ...replaceLegacyRecipes(legacyRecipes, ingredients)];
 
 export const transformations: CatalogTransformation[] = [
   ...extraTransformations,

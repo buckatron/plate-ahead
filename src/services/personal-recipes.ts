@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { blankDraft, draftSchema, parseIngredientLine, recipeIssues, type RecipeDraftData } from "@/domain/meals/personal-recipe";
 import { toBaseQuantity } from "@/domain/meals/quantity";
 import { decodeRecipeText } from "@/domain/meals/recipe-jsonld";
+import { recipeVisibility } from "@/repositories/recipe-visibility";
 import { prisma } from "@/services/prisma";
 
 export class PersonalRecipeError extends Error {}
@@ -215,20 +216,26 @@ export async function pairPersonalRecipes(input: { householdId: string; sourceCo
     !input.description.trim() || !input.compatibleState.trim()) {
     throw new PersonalRecipeError("Enter the required dinner portions and describe how the lunch reuses them.");
   }
-  const [source, target] = await Promise.all([
+  const [source, target, visible] = await Promise.all([
     prisma.recipeComponent.findFirst({ where: { id: input.sourceComponentId, reservable: true,
-      recipe: { role: "dinner", entry: { householdId: input.householdId, archivedAt: null } } },
+      recipe: { role: "dinner" } },
       include: { recipe: { include: { entry: true } } } }),
     prisma.recipeComponent.findFirst({ where: { id: input.targetComponentId,
-      recipe: { role: "lunch", entry: { householdId: input.householdId, archivedAt: null } } },
+      recipe: { role: "lunch" } },
       include: { recipe: { include: { entry: true } } } }),
+    prisma.recipe.findMany({ where: await recipeVisibility(input.householdId),
+      orderBy: [{ recipeKey: "asc" }, { version: "desc" }], select: { id: true, recipeKey: true } }),
   ]);
   const dinner = source?.recipe;
   const lunch = target?.recipe;
-  if (!dinner || !lunch || dinner.entry?.currentRecipeId !== dinner.id || lunch.entry?.currentRecipeId !== lunch.id ||
-    !source || !target ||
+  const currentIds = new Set([...new Map([...visible].reverse().map((recipe) => [recipe.recipeKey, recipe])).values()]
+    .map((recipe) => recipe.id));
+  if (!dinner || !lunch || !currentIds.has(dinner.id) || !currentIds.has(lunch.id) || !source || !target ||
     !source.storageGuidance || !source.storageSourceUrl) {
-    throw new PersonalRecipeError("Choose current personal recipes with a dinner marked for reservation and storage guidance.");
+    throw new PersonalRecipeError("Choose current recipes with a dinner marked for reservation and storage guidance.");
+  }
+  if (Math.round(input.requiredAmount * 1000) > source.baseYieldMilli) {
+    throw new PersonalRecipeError(`Reserve no more than ${source.baseYieldMilli / 1000} ${source.yieldUnit} from this dinner component.`);
   }
   const existing = await prisma.transformation.findFirst({ where: { sourceComponentId: source.id, targetRecipeKey: lunch.recipeKey } });
   if (existing) throw new PersonalRecipeError("These recipe versions are already paired.");
