@@ -74,7 +74,7 @@ Open `http://localhost:3000`.
 
 Prisma CLI, client, and SQLite adapter are pinned to version 7.10.0. This schema keeps the database URL in `prisma.config.ts`, as Prisma 7 requires. If a command reports Prisma 6, run `npm ci` in this project and check with `npx prisma --version` before migrating. Do not add `url` to `schema.prisma` to work around a version mismatch.
 
-Use `npm run db:migrate -- --name descriptive_change` only after changing the schema; a fresh setup applies the checked-in migrations with `npm run db:deploy`. The SQLite file is local and ignored by Git. Run `npm run typecheck`, `npm run lint`, and `npm test` after changes. `npm run test:integration` checks personal-recipe publishing and revision history against a temporary SQLite database; it does not touch your household data.
+Use `npm run db:migrate -- --name descriptive_change` only after changing the schema; a fresh setup applies the checked-in migrations with `npm run db:deploy`. The SQLite file is local and ignored by Git. Run `npm run typecheck`, `npm run lint`, and `npm test` after changes. `npm run test:integration` checks personal-recipe persistence and a seeded default-week cycle against a temporary SQLite database; it does not touch your household data.
 
 If a development server was already running while `npm run db:generate` updated the Prisma client, restart that server before using the app.
 

@@ -322,7 +322,7 @@ Acceptance: the household can write a recipe or paste a supported recipe URL, co
 ### Phase 6: End-to-end readiness
 
 - [ ] Verify mobile layout, keyboard navigation, readable recipes, grocery checkboxes, loading, and recoverable errors. Recipe count amounts now display beside ingredient names without `each`, and repeated ingredient lines keep distinct render keys; a full accessibility pass remains.
-- [ ] Test the complete default-household journey: generate, swap, shop, cook, consume lunch, react, generate another week.
+- [ ] Test the complete default-household journey: generate, swap, shop, cook, consume lunch, react, generate another week. An isolated SQLite integration test now covers the full service-level cycle with the seeded catalog; browser interaction and accessibility remain to verify.
 - [x] Add local SQLite export through a backup command and documented backup/restore for household data.
 - [x] Record lightweight product events for evaluating acceptance and swaps; keep them local in the MVP.
 - [x] Document remaining limitations and the additional authentication, migration, backup, and deployment work required for public hosting.

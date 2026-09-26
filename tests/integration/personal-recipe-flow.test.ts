@@ -27,7 +27,9 @@ beforeAll(async () => {
   } finally { database.close(); }
   ({ prisma } = await import("../../src/services/prisma"));
   recipes = await import("../../src/services/personal-recipes");
-  await prisma.household.create({ data: { id: "home", name: "Integration test kitchen" } });
+  await prisma.household.create({ data: { id: "home", name: "Integration test kitchen",
+    preferences: { create: {} } } });
+  await import("../../prisma/seed");
 }, 90_000);
 
 afterAll(async () => {
@@ -110,8 +112,8 @@ describe("personal recipe persistence", () => {
     const dinners = plan.slots.filter((slot) => slot.slotType === "cook");
     expect(dinners.map((slot) => slot.recipe?.recipeKey).sort()).toEqual([manualKey, importedKey].sort());
     const groceries = await getGroceryNeeds(householdId, planId);
-    expect(groceries?.needs.map((need) => need.name).sort()).toEqual(["eggs", "rice", "tomatoes"]);
-    const eggs = groceries!.needs.find((need) => need.name === "eggs")!;
+    expect(groceries?.needs.map((need) => need.name.toLowerCase()).sort()).toEqual(["eggs", "rice", "tomatoes"]);
+    const eggs = groceries!.needs.find((need) => need.name.toLowerCase() === "eggs")!;
     expect(eggs.quantity.milli).toBe(2000);
     expect(groceries?.reviewLines).toEqual([{ recipeKey: importedKey, recipeTitle: "Crispy eggs",
       version: 1, line: "2 to 3 eggs" }]);
@@ -119,7 +121,7 @@ describe("personal recipe persistence", () => {
       ingredientId: eggs.ingredientId, unitGroup: "count", rawAmount: "1" });
     await setGroceryPurchased({ householdId, planId, expectedRevision: plan.revision,
       ingredientId: eggs.ingredientId, unitGroup: "count", checked: true });
-    expect((await getGroceryNeeds(householdId, planId))?.needs.find((need) => need.name === "eggs"))
+    expect((await getGroceryNeeds(householdId, planId))?.needs.find((need) => need.name.toLowerCase() === "eggs"))
       .toMatchObject({ onHandMilli: 1000, toBuy: { milli: 1000 }, checked: true });
 
     await acceptPlan(householdId, planId, plan.revision);
@@ -158,4 +160,63 @@ describe("personal recipe persistence", () => {
     expect((await prisma.planSlot.findUniqueOrThrow({ where: { id: dinner.id }, include: { recipe: true } })).recipe?.title)
       .toBe("Tomato rice");
   }, 30_000);
+
+  it("completes a default week with a swap, saved lunch, feedback, and another draft", async () => {
+    const { createGeneratedWeek } = await import("../../src/services/plan-week");
+    const { getSwapShortlist } = await import("../../src/services/swap-options");
+    const { applySwap } = await import("../../src/services/apply-swap");
+    const { getGroceryNeeds, saveGroceryOnHand } = await import("../../src/services/grocery-needs");
+    const { acceptPlan } = await import("../../src/services/accept-plan");
+    const { recordCooking } = await import("../../src/services/record-cooking");
+    const { consumeLunch } = await import("../../src/services/consume-lunch");
+    const { saveMealFeedback } = await import("../../src/services/save-meal-feedback");
+
+    const planId = await createGeneratedWeek("home", new Date("2026-10-01T12:00:00Z"));
+    const firstPlan = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId }, include: {
+      slots: { include: { components: { include: { outgoingAllocations: true } } } },
+    } });
+    const sourceDinner = firstPlan.slots.find((slot) => slot.mealKind === "dinner" &&
+      slot.components.some((component) => component.outgoingAllocations.length > 0))!;
+    const swapDinner = firstPlan.slots.find((slot) => slot.slotType === "cook" && slot.id !== sourceDinner.id)!;
+    const shortlist = await getSwapShortlist("home", planId, swapDinner.id);
+    expect(shortlist?.options.length).toBeGreaterThan(0);
+    const replacement = shortlist!.options[0];
+    expect(await applySwap({ householdId: "home", planId, slotId: swapDinner.id,
+      recipeId: replacement.recipe.id, expectedRevision: firstPlan.revision })).toEqual({ cancelledLunch: false });
+    expect((await prisma.planSlot.findUniqueOrThrow({ where: { id: swapDinner.id } })).recipeId).toBe(replacement.recipe.id);
+
+    const swappedPlan = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId } });
+    const groceries = await getGroceryNeeds("home", planId);
+    expect(groceries?.needs.length).toBeGreaterThan(0);
+    const firstNeed = groceries!.needs[0];
+    await saveGroceryOnHand({ householdId: "home", planId, expectedRevision: swappedPlan.revision,
+      ingredientId: firstNeed.ingredientId, unitGroup: firstNeed.key.slice(firstNeed.ingredientId.length + 1), rawAmount: "1" });
+    expect((await getGroceryNeeds("home", planId))?.needs.find((need) => need.key === firstNeed.key)?.onHandMilli).toBe(1000);
+    await acceptPlan("home", planId, swappedPlan.revision);
+
+    const accepted = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId }, include: {
+      slots: { include: { components: { include: { outgoingAllocations: true, recipeComponent: true } } } },
+    } });
+    const cookedSource = accepted.slots.find((slot) => slot.id === sourceDinner.id)!;
+    const savedAmounts = cookedSource.components.filter((component) => component.recipeComponent.reservable).map((component) => ({
+      componentId: component.recipeComponentId,
+      rawAmount: String(component.outgoingAllocations.reduce((sum, allocation) => sum + allocation.reservedMilli, 0) / 1000),
+    }));
+    expect(savedAmounts.length).toBeGreaterThan(0);
+    await recordCooking({ householdId: "home", planId, slotId: cookedSource.id,
+      expectedRevision: accepted.revision, requestId: "default-week-cook", servingsServed: 2, amounts: savedAmounts });
+    const event = await prisma.cookingEvent.findUniqueOrThrow({ where: { householdId_requestId: {
+      householdId: "home", requestId: "default-week-cook" } } });
+    const linkedLunch = await prisma.planSlot.findFirstOrThrow({ where: { planId, mealKind: "lunch",
+      incomingAllocations: { some: { sourceComponent: { slotId: cookedSource.id } } } } });
+    const afterDinner = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId } });
+    expect(await consumeLunch({ householdId: "home", planId, slotId: linkedLunch.id,
+      expectedRevision: afterDinner.revision, requestId: "default-week-lunch" })).toEqual({ alreadyRecorded: false });
+    expect((await prisma.planSlot.findUniqueOrThrow({ where: { id: linkedLunch.id } })).status).toBe("eaten");
+    await saveMealFeedback({ householdId: "home", planId, slotId: cookedSource.id, cookingEventId: event.id,
+      expectedRevision: 0, reaction: "good", effort: "about_right", leftovers: "appealing" });
+    const nextPlanId = await createGeneratedWeek("home", new Date("2026-10-08T12:00:00Z"));
+    expect(nextPlanId).not.toBe(planId);
+    expect((await prisma.mealPlan.findUniqueOrThrow({ where: { id: nextPlanId } })).state).toBe("draft");
+  }, 60_000);
 });
