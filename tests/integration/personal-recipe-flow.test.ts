@@ -75,4 +75,76 @@ describe("personal recipe persistence", () => {
     expect((await getRecipe(key, "home", 1))?.recipe.title).toBe("Crispy eggs");
     await expect(recipes.publishDraft("home", revision.id, revision.revision + 1)).rejects.toThrow("draft changed");
   }, 30_000);
+
+  it("plans, shops, cooks, and records feedback for personal recipes while preserving history", async () => {
+    const householdId = "journey";
+    await prisma.household.create({ data: { id: householdId, name: "Recipe journey",
+      preferences: { create: { dinnerCount: 2, lunchCount: 0, includePrototypeRecipes: false } } } });
+    const { blankDraft } = await import("../../src/domain/meals/personal-recipe");
+    const manual = await recipes.createDraft(householdId, { ...blankDraft, title: "Tomato rice",
+      servings: 2, totalMinutes: 30, ingredientLines: ["2 cups rice", "2 tomatoes"],
+      steps: ["Cook rice.", "Add tomatoes."] });
+    const manualKey = await recipes.publishDraft(householdId, manual.id, manual.revision);
+    const imported = await recipes.createDraft(householdId, { ...blankDraft, title: "Crispy eggs",
+      servings: 2, totalMinutes: 15, ingredientLines: ["2 eggs"], steps: ["Fry eggs."],
+      origin: "url_import", sourceUrl: "https://recipes.example/eggs", sourceAttribution: "Test kitchen" });
+    const importedKey = await recipes.publishDraft(householdId, imported.id, imported.revision);
+
+    const { createGeneratedWeek } = await import("../../src/services/plan-week");
+    const { getGroceryNeeds, saveGroceryOnHand, setGroceryPurchased } = await import("../../src/services/grocery-needs");
+    const { acceptPlan } = await import("../../src/services/accept-plan");
+    const { recordCooking } = await import("../../src/services/record-cooking");
+    const { saveMealFeedback } = await import("../../src/services/save-meal-feedback");
+    const planId = await createGeneratedWeek(householdId, new Date("2026-10-01T12:00:00Z"));
+    const plan = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId },
+      include: { slots: { include: { recipe: true } } } });
+    const dinners = plan.slots.filter((slot) => slot.slotType === "cook");
+    expect(dinners.map((slot) => slot.recipe?.recipeKey).sort()).toEqual([manualKey, importedKey].sort());
+    const groceries = await getGroceryNeeds(householdId, planId);
+    expect(groceries?.needs.map((need) => need.name).sort()).toEqual(["eggs", "rice", "tomatoes"]);
+    const eggs = groceries!.needs.find((need) => need.name === "eggs")!;
+    expect(eggs.quantity.milli).toBe(2000);
+    await saveGroceryOnHand({ householdId, planId, expectedRevision: plan.revision,
+      ingredientId: eggs.ingredientId, unitGroup: "count", rawAmount: "1" });
+    await setGroceryPurchased({ householdId, planId, expectedRevision: plan.revision,
+      ingredientId: eggs.ingredientId, unitGroup: "count", checked: true });
+    expect((await getGroceryNeeds(householdId, planId))?.needs.find((need) => need.name === "eggs"))
+      .toMatchObject({ onHandMilli: 1000, toBuy: { milli: 1000 }, checked: true });
+
+    await acceptPlan(householdId, planId, plan.revision);
+    const dinner = dinners.find((slot) => slot.recipe?.recipeKey === manualKey)!;
+    const accepted = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId } });
+    const cooking = await recordCooking({ householdId, planId, slotId: dinner.id,
+      expectedRevision: accepted.revision, requestId: "journey-cook", servingsServed: 2, amounts: [] });
+    expect(cooking).toEqual({ alreadyRecorded: false, lunchNeedsAttention: false });
+    const event = await prisma.cookingEvent.findUniqueOrThrow({ where: { householdId_requestId: {
+      householdId, requestId: "journey-cook" } } });
+    await saveMealFeedback({ householdId, planId, slotId: dinner.id, cookingEventId: event.id,
+      expectedRevision: 0, reaction: "good", effort: "about_right", leftovers: null });
+    const importedDinner = dinners.find((slot) => slot.recipe?.recipeKey === importedKey)!;
+    const afterFirstDinner = await prisma.mealPlan.findUniqueOrThrow({ where: { id: planId } });
+    await recordCooking({ householdId, planId, slotId: importedDinner.id,
+      expectedRevision: afterFirstDinner.revision, requestId: "journey-imported-cook", servingsServed: 2, amounts: [] });
+    const importedEvent = await prisma.cookingEvent.findUniqueOrThrow({ where: { householdId_requestId: {
+      householdId, requestId: "journey-imported-cook" } } });
+    await saveMealFeedback({ householdId, planId, slotId: importedDinner.id, cookingEventId: importedEvent.id,
+      expectedRevision: 0, reaction: "loved", effort: "easy", leftovers: null });
+
+    const entry = await prisma.recipeEntry.findUniqueOrThrow({ where: { recipeKey: manualKey } });
+    const revision = await recipes.createRevisionDraft(householdId, entry.id);
+    const editable = await recipes.findDraft(householdId, revision.id);
+    await recipes.saveDraft(householdId, revision.id, revision.revision,
+      { ...editable!.payload, title: "Tomato rice with herbs" });
+    await recipes.publishDraft(householdId, revision.id, revision.revision + 1);
+    const savedSlot = await prisma.planSlot.findUniqueOrThrow({ where: { id: dinner.id }, include: { recipe: true } });
+    expect(savedSlot.recipe?.title).toBe("Tomato rice");
+    expect(event.recipeId).toBe(savedSlot.recipeId);
+    expect((await prisma.mealFeedback.findUniqueOrThrow({ where: { cookingEventId: event.id } })).reaction).toBe("good");
+    expect((await prisma.mealFeedback.findUniqueOrThrow({ where: { cookingEventId: importedEvent.id } })).reaction).toBe("loved");
+    await recipes.setRecipeArchived(householdId, entry.id, true);
+    const { listDinnerRecipes } = await import("../../src/repositories/recipes");
+    expect((await listDinnerRecipes(householdId)).map((recipe) => recipe.recipeKey)).toEqual([importedKey]);
+    expect((await prisma.planSlot.findUniqueOrThrow({ where: { id: dinner.id }, include: { recipe: true } })).recipe?.title)
+      .toBe("Tomato rice");
+  }, 30_000);
 });
