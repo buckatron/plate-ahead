@@ -41,20 +41,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <SiteHeader />
         <section className="hero" aria-labelledby="page-title">
           <div>
-            <p className="overline">The kitchen starts here</p>
-            <h1 id="page-title">More variety.<br /><em>Less deciding.</em></h1>
-            <p className="lead">A meal plan for two that connects dinner, fresh lunches, and the groceries you actually need.</p>
+            <h1 id="page-title">Plan the week</h1>
+            <p className="lead">Choose dinners, plan lunches from leftovers, and check what to buy.</p>
           </div>
-          <div className="hero-mark" aria-hidden="true"><span>{plan ? plan.slots.filter((slot) => slot.slotType === "cook" && slot.mealKind === "dinner").length : household?.settings.dinnerCount ?? 6}</span><small>good dinners<br />each week</small></div>
         </section>
 
         <section className="content-grid" aria-label="Planning overview">
           <div className="panel plan-panel">
-            <div className="panel-head"><h2>{plan ? `Week of ${plan.weekStart}` : "Your week"}</h2><span className="pill">{plan?.state ?? "Getting started"}</span></div>
-            <p className="plan-intro">{plan?.state === "active" ? "This is your accepted week. Each linked lunch uses food set aside from dinner." :
-              plan?.state === "archived" ? "This earlier plan was replaced by another accepted plan for the week." :
-              plan ? "A draft to review before shopping. Each linked lunch uses food set aside from dinner." :
-              "Let’s make a week with fresh dinners and a couple of transformed leftover lunches."}</p>
+            <div className="panel-head"><h2>{plan ? `Week of ${plan.weekStart}` : "Next week"}</h2><span className="pill">{plan?.state ?? "No plan"}</span></div>
+            <p className="plan-intro">{plan?.state === "active" ? "Your accepted plan. Lunches use portions saved from dinner." :
+              plan?.state === "archived" ? "An earlier plan for this week." :
+              plan ? "Review the dinners and groceries, then use this plan." :
+              "Set your preferences, then generate a draft."}</p>
             {planningError && <p className="plan-error" role="alert">{planningError}</p>}
             {acceptError && <p className="plan-error" role="alert">{acceptError}</p>}
             {swapError && <p className="plan-error" role="alert">{swapError}</p>}
@@ -82,18 +80,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               ? "Dinner swapped. Its linked lunch was cancelled; grocery needs were recalculated."
               : "Dinner and linked lunch updated. Grocery needs were recalculated."}</p>}
             <div className="plan-actions">
-              <form action={generateWeekAction} className="plan-action">
-                {plan && ["draft", "active"].includes(plan.state) && <>
-                  <input type="hidden" name="currentPlanId" value={plan.id} />
-                  <input type="hidden" name="currentRevision" value={plan.revision} />
-                </>}
-                <button type="submit">{plan ? "Generate another draft" : "Generate my week"}</button>
-              </form>
               {plan?.state === "draft" && <form action={acceptPlanAction} className="plan-action accept-action">
                 <input type="hidden" name="planId" value={plan.id} />
                 <input type="hidden" name="revision" value={plan.revision} />
                 <button type="submit">Use this plan</button>
               </form>}
+              <form action={generateWeekAction} className={`plan-action${plan ? " generate-again-action" : ""}`}>
+                {plan && ["draft", "active"].includes(plan.state) && <>
+                  <input type="hidden" name="currentPlanId" value={plan.id} />
+                  <input type="hidden" name="currentRevision" value={plan.revision} />
+                </>}
+                <button type="submit">{plan ? "Generate another draft" : "Generate a plan"}</button>
+              </form>
             </div>
             {plan?.state === "draft" && activePlan && activePlan.id !== plan.id &&
               <p className="plan-context">Using this draft will replace your <Link href={`/?planId=${activePlan.id}`}>accepted plan for this week</Link>.</p>}
@@ -237,7 +235,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   </div>)}
                 </section>)}
               </div>
-            ) : <div className="empty-state"><div className="empty-icon" aria-hidden="true">✳</div><h3>Ready when you are.</h3><p>Generate a draft for next week. You can browse each recipe before deciding what to cook.</p></div>}
+            ) : null}
           </div>
 
           <div className="aside-stack">
@@ -246,7 +244,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               {household && <SettingsForm settings={household.settings} hasPlan={Boolean(plan)} />}
             </div>
             {household && leftoverOverview && <LeftoverOverview overview={leftoverOverview} timezone={household.timezone} />}
-            <div className="note"><span className="note-label">Our approach</span><p>Ingredients can repeat. The meal should still feel new.</p></div>
           </div>
         </section>
       </div>

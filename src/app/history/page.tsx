@@ -26,9 +26,8 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
   return <main className="page"><div className="shell">
     <SiteHeader />
     <section className="library-heading">
-      <p className="overline">Your cooking history</p>
-      <h1>Meals you made,<br /><em>lessons you keep.</em></h1>
-      <p className="lead">Confirmed dinners guide the next week. You can change feedback at any time, including a temporary break from a favorite.</p>
+      <h1>Cooking history</h1>
+      <p className="lead">See what you cooked and update your feedback. Your next plan uses it.</p>
     </section>
     {feedbackError && <p className="plan-error" role="alert">{feedbackError}</p>}
     {feedbackSaved && <p className="settings-message settings-saved" role="status">Meal feedback saved. The next draft and swap list will use it.</p>}

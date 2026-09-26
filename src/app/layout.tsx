@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Plate Ahead",
-  description: "A calmer way to plan delicious weeks of cooking.",
+  description: "Plan dinners, leftover lunches, and groceries.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

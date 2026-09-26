@@ -16,8 +16,8 @@ export default async function PairPage({ searchParams }: { searchParams: Promise
     recipe.components.map((component) => ({ recipe, component })));
   return <main className="page"><div className="shell"><SiteHeader />
     <div className="recipe-breadcrumb"><Link href="/recipes">← Recipes</Link></div>
-    <section className="library-heading"><p className="overline">A second life</p><h1>Link a dinner to lunch.</h1>
-      <p className="lead">Choose how many extra dinner portions to make and use in a different lunch the next day.</p></section>
+    <section className="library-heading"><h1>Plan a leftover lunch</h1>
+      <p className="lead">Choose a dinner, a lunch, and how much dinner to save.</p></section>
     {saved && <p role="status">Lunch pairing saved. It can appear in new weekly plans.</p>}
     {error && <p className="plan-error" role="alert">{error}</p>}
     {(!dinners.length || !lunches.length) && <p>Create a personal dinner with “reserve extra portions” and a personal lunch recipe first.</p>}

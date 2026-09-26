@@ -32,14 +32,13 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
       <SiteHeader />
       <div className="recipe-breadcrumb"><Link href={result ? `/?planId=${result.plan.id}` : "/"}>← Back to week</Link></div>
       <section className="grocery-heading">
-        <p className="overline">Plan before shopping</p>
-        <h1>Groceries<br /><em>for the week.</em></h1>
+        <h1>Groceries</h1>
         {result && <p className="lead">Week of {weekLabel} · {result.needs.length} ingredients · {result.plan.state} plan
           {result.unallocatedPurchased.length > 0 && ` · ${result.unallocatedPurchased.length} bought but no longer needed`}</p>}
       </section>
       {shoppingError && <p className="plan-error" role="alert">{shoppingError}</p>}
       {result ? <>
-        <p className="grocery-note">Recipe needs include extra dinner portions reserved for lunch and add new lunch ingredients once. Enter what you already have to see the amount still needed. A blank on-hand field means you have not checked yet; zero means you checked and have none. Optional ingredients are omitted. Bought checks stay saved when the plan changes.</p>
+        <p className="grocery-note">Enter what you have; the list shows what remains to buy. Leave a field blank if you have not checked yet. Planned lunches are included.</p>
         {result.reviewLines.length > 0 && <div className="recipe-review" role="alert">
           <strong>Some saved recipe amounts need review before shopping.</strong>
           <p>These lines contain a range, alternative, or optional amount. Grocery quantities based on them may be inaccurate:</p>

@@ -20,11 +20,10 @@ export default async function SwapPage({ searchParams }: { searchParams: Promise
     <SiteHeader />
     <div className="recipe-breadcrumb"><Link href={`/?planId=${result.plan.id}`}>← Back to week</Link></div>
     <section className="swap-heading">
-      <p className="overline">Explore a change</p>
-      <h1>Something else<br /><em>for dinner.</em></h1>
-      <p className="lead">{day}: currently {result.slot.title}.</p>
+      <h1>Swap dinner</h1>
+      <p className="lead">{day} · {result.slot.title}</p>
     </section>
-    <p className="swap-notice">The grocery changes below are recipe needs, before pantry review. Confirming a swap updates this plan and its linked lunch in one step. Saved on-hand amounts and purchase checks stay in place.</p>
+    <p className="swap-notice">Choose another dinner. Grocery changes are shown before pantry amounts; a linked lunch may change too.</p>
     {swapError && <p className="plan-error" role="alert">{swapError}</p>}
     {(result.slot.locked || result.linkedLunch?.locked) && <p className="plan-error">This dinner or its linked lunch is locked, so the swap cannot be saved yet.</p>}
     {result.linkedLunch && <p className="swap-lunch-note">The current dinner supplies <strong>{result.linkedLunch.title}</strong>. Each alternative below shows what would happen to that lunch.</p>}
