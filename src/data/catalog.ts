@@ -3,6 +3,7 @@ import { extraRecipes, extraTransformations } from "./catalog-extra";
 import { sourcedRecipes } from "./catalog-sourced";
 import { additionalSourcedRecipes } from "./catalog-sourced-more";
 import { expandedSourcedRecipes } from "./catalog-sourced-expanded";
+import { latestSourcedRecipes } from "./catalog-sourced-few";
 import { replaceLegacyRecipes } from "./catalog-replacements";
 
 export type CatalogAmount = { amount: number; unit: Unit };
@@ -178,6 +179,10 @@ export const ingredients: CatalogIngredient[] = [
   { key: "edamame", name: "Shelled edamame", category: "Frozen", defaultUnit: "g" },
   { key: "radishes", name: "Radishes", category: "Produce", defaultUnit: "g" },
   { key: "cauliflower", name: "Cauliflower", category: "Produce", defaultUnit: "g" },
+  { key: "gnocchi", name: "Potato gnocchi", category: "Dry goods", defaultUnit: "g" },
+  { key: "broccolini", name: "Broccolini", category: "Produce", defaultUnit: "g" },
+  { key: "zaatar", name: "Za'atar", category: "Pantry", defaultUnit: "g" },
+  { key: "pork-chops", name: "Bone-in pork chops", category: "Meat & seafood", defaultUnit: "g" },
 ];
 
 const legacyRecipes: CatalogRecipe[] = [
@@ -410,6 +415,7 @@ const legacyRecipes: CatalogRecipe[] = [
 ];
 
 export const recipes: CatalogRecipe[] = [...sourcedRecipes, ...additionalSourcedRecipes, ...expandedSourcedRecipes,
+  ...latestSourcedRecipes,
   ...replaceLegacyRecipes(legacyRecipes, ingredients)];
 
 export const transformations: CatalogTransformation[] = [
