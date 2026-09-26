@@ -2,6 +2,7 @@ import type { Unit } from "@/domain/meals/quantity";
 import { extraRecipes, extraTransformations } from "./catalog-extra";
 import { sourcedRecipes } from "./catalog-sourced";
 import { additionalSourcedRecipes } from "./catalog-sourced-more";
+import { expandedSourcedRecipes } from "./catalog-sourced-expanded";
 import { replaceLegacyRecipes } from "./catalog-replacements";
 
 export type CatalogAmount = { amount: number; unit: Unit };
@@ -158,6 +159,25 @@ export const ingredients: CatalogIngredient[] = [
   { key: "jalapeno", name: "Jalapeño", category: "Produce", defaultUnit: "each" },
   { key: "ground-coriander", name: "Ground coriander", category: "Pantry", defaultUnit: "g" },
   { key: "cod", name: "Cod fillets", category: "Meat & seafood", defaultUnit: "g" },
+  { key: "italian-sausage", name: "Italian sausage", category: "Meat & seafood", defaultUnit: "g" },
+  { key: "marinara", name: "Marinara sauce", category: "Pantry", defaultUnit: "g" },
+  { key: "dried-basil", name: "Dried basil", category: "Pantry", defaultUnit: "g" },
+  { key: "bay-leaf", name: "Bay leaf", category: "Pantry", defaultUnit: "each" },
+  { key: "orzo", name: "Dry orzo", category: "Dry goods", defaultUnit: "g" },
+  { key: "leeks", name: "Leeks", category: "Produce", defaultUnit: "g" },
+  { key: "chives", name: "Fresh chives", category: "Produce", defaultUnit: "g" },
+  { key: "ground-turkey", name: "Ground turkey", category: "Meat & seafood", defaultUnit: "g" },
+  { key: "poblano", name: "Poblano pepper", category: "Produce", defaultUnit: "each" },
+  { key: "kidney-beans", name: "Canned kidney beans, drained", category: "Canned goods", defaultUnit: "g" },
+  { key: "pinto-beans", name: "Canned pinto beans, drained", category: "Canned goods", defaultUnit: "g" },
+  { key: "fire-roasted-tomatoes", name: "Fire-roasted diced tomatoes", category: "Canned goods", defaultUnit: "g" },
+  { key: "tomato-paste", name: "Tomato paste", category: "Canned goods", defaultUnit: "g" },
+  { key: "soba", name: "Dry soba noodles", category: "Dry goods", defaultUnit: "g" },
+  { key: "avocado", name: "Avocado", category: "Produce", defaultUnit: "each" },
+  { key: "snap-peas", name: "Snap peas", category: "Produce", defaultUnit: "g" },
+  { key: "edamame", name: "Shelled edamame", category: "Frozen", defaultUnit: "g" },
+  { key: "radishes", name: "Radishes", category: "Produce", defaultUnit: "g" },
+  { key: "cauliflower", name: "Cauliflower", category: "Produce", defaultUnit: "g" },
 ];
 
 const legacyRecipes: CatalogRecipe[] = [
@@ -389,7 +409,8 @@ const legacyRecipes: CatalogRecipe[] = [
   },
 ];
 
-export const recipes: CatalogRecipe[] = [...sourcedRecipes, ...additionalSourcedRecipes, ...replaceLegacyRecipes(legacyRecipes, ingredients)];
+export const recipes: CatalogRecipe[] = [...sourcedRecipes, ...additionalSourcedRecipes, ...expandedSourcedRecipes,
+  ...replaceLegacyRecipes(legacyRecipes, ingredients)];
 
 export const transformations: CatalogTransformation[] = [
   ...extraTransformations,
