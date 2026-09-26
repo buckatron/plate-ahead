@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankDraft, parseIngredientLine, recipeIssues } from "../../src/domain/meals/personal-recipe";
+import { blankDraft, manualDraftFromUrl, parseIngredientLine, recipeIssues } from "../../src/domain/meals/personal-recipe";
 
 describe("personal recipe ingredients", () => {
   it("parses common household amounts with fixed precision", () => {
@@ -20,5 +20,14 @@ describe("personal recipe ingredients", () => {
     expect(recipeIssues(blankDraft)).toContain("Confirm how many people the recipe serves.");
     expect(recipeIssues({ ...blankDraft, title: "Eggs", servings: 2, totalMinutes: 10,
       ingredientLines: ["2 eggs"], steps: ["Cook the eggs."] })).toEqual([]);
+  });
+
+  it("keeps a blocked site's source link in a manual draft without claiming an import", () => {
+    expect(manualDraftFromUrl("https://www.example.com/recipe?view=full#steps")).toMatchObject({
+      sourceUrl: "https://www.example.com/recipe?view=full", sourceAttribution: "example.com", origin: "manual",
+      ingredientLines: [], steps: [],
+    });
+    expect(manualDraftFromUrl("https://user:password@example.com/recipe")).toBeNull();
+    expect(manualDraftFromUrl("file:///recipe.html")).toBeNull();
   });
 });

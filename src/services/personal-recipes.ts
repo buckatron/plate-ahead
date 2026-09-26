@@ -3,6 +3,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { blankDraft, draftSchema, parseIngredientLine, recipeIssues, type RecipeDraftData } from "@/domain/meals/personal-recipe";
 import { toBaseQuantity } from "@/domain/meals/quantity";
+import { decodeRecipeText } from "@/domain/meals/recipe-jsonld";
 import { prisma } from "@/services/prisma";
 
 export class PersonalRecipeError extends Error {}
@@ -43,7 +44,7 @@ export async function createRevisionDraft(householdId: string, entryId: string) 
   const advanced = recipe.components.length > 1 || recipe.components[0]?.name !== "Whole recipe";
   const payload: RecipeDraftData = {
     schemaVersion: 1,
-    title: recipe.title, summary: recipe.summary, role: recipe.role === "lunch" ? "lunch" : "dinner",
+    title: recipe.title, summary: decodeRecipeText(recipe.summary), role: recipe.role === "lunch" ? "lunch" : "dinner",
     servings: recipe.baseServings, totalMinutes: recipe.totalMinutes, activeMinutes: recipe.activeMinutes,
     cuisine: recipe.tags.find((tag) => tag.dimension === "cuisine")?.value ?? "",
     ingredientLines: advanced ? [] : recipe.components.flatMap(linesFor), ingredientChoices: {},

@@ -1,7 +1,29 @@
 import { blankDraft, type RecipeDraftData } from "./personal-recipe";
 
+const namedEntities: Record<string, string> = {
+  amp: "&", apos: "'", quot: '"', nbsp: " ", lt: "<", gt: ">",
+  rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", ndash: "–", mdash: "—",
+  hellip: "…", frac12: "½", frac14: "¼", frac34: "¾", deg: "°",
+};
+
+export function decodeRecipeText(text: string): string {
+  let result = text;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const decoded = result.replace(/&(#(?:x[0-9a-f]+|[0-9]+)|[a-z][a-z0-9]+);/gi, (original, entity: string) => {
+      if (!entity.startsWith("#")) return namedEntities[entity.toLowerCase()] ?? original;
+      const hex = entity[1]?.toLowerCase() === "x";
+      const codePoint = Number.parseInt(entity.slice(hex ? 2 : 1), hex ? 16 : 10);
+      return codePoint >= 32 && codePoint <= 0x10ffff && !(codePoint >= 0xd800 && codePoint <= 0xdfff)
+        ? String.fromCodePoint(codePoint) : original;
+    });
+    if (decoded === result) break;
+    result = decoded;
+  }
+  return result;
+}
+
 function clean(value: unknown): string {
-  if (typeof value === "string") return value.replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  if (typeof value === "string") return decodeRecipeText(value.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
   if (typeof value === "number") return String(value);
   return "";
 }
@@ -38,9 +60,10 @@ function ingredientLine(value: unknown): string {
   return name || [amount, unit].filter(Boolean).join(" ");
 }
 export function extractRecipeJsonLd(html: string, url: string): RecipeDraftData[] {
-  const blocks = [...html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const blocks = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)]
+    .filter((match) => /(?:^|\s)type\s*=\s*(?:"application\/ld\+json"|'application\/ld\+json'|application\/ld\+json(?=\s|$))/i.test(match[1]));
   const found = blocks.flatMap((match) => {
-    try { return recipesIn(JSON.parse(match[1].trim())); } catch { return []; }
+    try { return recipesIn(JSON.parse(match[2].trim())); } catch { return []; }
   });
   return found.slice(0, 20).map((recipe) => {
     const author = recipe.author;

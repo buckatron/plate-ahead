@@ -11,6 +11,13 @@ body { margin: 0; }
 .site-nav { display: flex; gap: 22px; align-items: center; }
 .site-nav a { color: #465e4d; text-decoration: none; font-size: 13px; font-weight: 700; }
 .site-nav a:hover, .text-link:hover { text-decoration: underline; }
+.primary-button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; background: #397254; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.primary-button:hover { background: #2d6046; }
+.primary-button:focus-visible { outline: 3px solid #c18043; outline-offset: 3px; }
+.secondary-button { min-height: 44px; padding: 10px 16px; border: 1px solid #397254; border-radius: 8px; background: #fffefa; color: #28553c; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.secondary-button:hover { background: #eef3eb; }
+.secondary-button:focus-visible { outline: 3px solid #c18043; outline-offset: 3px; }
+.manual-import-fallback { margin-top: -12px; }
 .eyebrow, .overline, .note-label { color: #51745c; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 .hero { display: flex; justify-content: space-between; align-items: center; min-height: 330px; gap: 30px; padding: 52px 0 46px; }
 .overline { margin: 0 0 20px; }
@@ -197,7 +204,8 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .recipe-section h2, .recipe-side h2 { margin-bottom: 16px; }
 .recipe-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0 25px; padding: 13px; border-radius: 10px; background: #f2f4eb; font-size: 13px; }
 .recipe-controls select { font: inherit; padding: 8px; border: 1px solid #c9d2c5; background: #fffefa; border-radius: 6px; }
-.recipe-controls button { font: inherit; font-weight: 700; color: #fff; background: #397254; border: 0; border-radius: 7px; padding: 9px 12px; }
+.recipe-controls button { min-height: 44px; font: inherit; font-weight: 700; color: #fff; background: #397254; border: 0; border-radius: 7px; padding: 9px 12px; cursor: pointer; }
+.recipe-controls button:disabled { cursor: wait; opacity: .7; }
 .lunch-check { display: flex; align-items: center; gap: 6px; margin-right: auto; }
 .lunch-check input { width: 17px; height: 17px; accent-color: #397254; }
 .ingredient-group { border-top: 1px solid #e6eae3; padding: 20px 0 2px; }
@@ -234,6 +242,7 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .lunch-panel h2 { margin: 11px 0; }
 .lunch-panel .text-link { display: inline-block; margin-top: 3px; }
 @media (max-width: 720px) { .page { padding: 18px; } .topbar { flex-wrap: wrap; } .site-nav { flex-wrap: wrap; gap: 10px 18px; } .hero { padding: 42px 0; min-height: 0; } .hero-mark { display: none; } .content-grid { grid-template-columns: 1fr; } h1 { letter-spacing: -2px; overflow-wrap: anywhere; } .eyebrow { display: none; } }
+@media (max-width: 720px) { .site-nav { gap: 0 18px; } .site-nav a { display: inline-flex; align-items: center; min-height: 44px; } }
 @media (max-width: 720px) { .recipe-grid, .recipe-layout { grid-template-columns: 1fr; } .library-heading { padding-top: 42px; } .recipe-card { min-height: 0; } .recipe-hero { padding: 35px 0; } }
 @media (max-width: 720px) { .grocery-sections { grid-template-columns: 1fr; } .grocery-heading { padding-top: 32px; } }
 @media (max-width: 720px) { .personal-recipe-fields { grid-template-columns: 1fr; } }

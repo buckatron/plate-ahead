@@ -32,6 +32,27 @@ describe("recipe link extraction", () => {
       recipeInstructions: "Warm broth." })}</script>`;
     expect(extractRecipeJsonLd(html, "https://recipes.example/soup")[0].ingredientLines).toEqual(["2 cups broth"]);
   });
+
+  it("reads unquoted JSON-LD type attributes used by recipe sites", () => {
+    const html = `<script type=application/ld+json class=yoast-schema-graph>${JSON.stringify({ "@graph": [
+      { "@type": "Recipe", name: "Lemon Orzo", recipeIngredient: ["1 cup orzo"], recipeInstructions: "Cook orzo." },
+    ] })}</script>`;
+    expect(extractRecipeJsonLd(html, "https://recipes.example/lemon-orzo")[0]).toMatchObject({
+      title: "Lemon Orzo", ingredientLines: ["1 cup orzo"], steps: ["Cook orzo."],
+    });
+  });
+
+  it("decodes common named and numeric entities in imported recipe text", () => {
+    const html = `<script type=application/ld+json>${JSON.stringify({
+      "@type": "Recipe", name: "Cook&#039;s &amp; Baker&#x27;s Pasta",
+      description: "It&#039;s bright &amp; creamy with &frac12; a lemon.",
+      recipeIngredient: ["1 &frac12; cups orzo"], recipeInstructions: "Stir &amp; serve.",
+    })}</script>`;
+    expect(extractRecipeJsonLd(html, "https://recipes.example/pasta")[0]).toMatchObject({
+      title: "Cook's & Baker's Pasta", summary: "It's bright & creamy with ½ a lemon.",
+      ingredientLines: ["1 ½ cups orzo"], steps: ["Stir & serve."],
+    });
+  });
 });
 
 describe("recipe import address boundary", () => {

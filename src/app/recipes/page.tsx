@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { listDinnerRecipes } from "@/repositories/recipes";
 import { archiveRecipeAction, editRecipeAction, setPrototypeRecipesAction, setRecipePlanningAction } from "./actions";
 import { prisma } from "@/services/prisma";
+import { decodeRecipeText } from "@/domain/meals/recipe-jsonld";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
               <article className="recipe-card" key={recipe.id}>
                 <div className="recipe-card-top"><span>{cuisine}</span><span>{recipe.totalMinutes} min</span></div>
                 <h2><Link href={`/recipes/${recipe.recipeKey}`}>{recipe.title}</Link></h2>
-                <p>{recipe.summary}</p>
+                <p>{decodeRecipeText(recipe.summary)}</p>
                 {recipe.lunches.length > 0 && <div className="recipe-card-lunch">Becomes lunch: {recipe.lunches.map((lunch) => lunch.title).join(", ")}</div>}
                 <Link className="text-link" href={`/recipes/${recipe.recipeKey}`}>View recipe <span aria-hidden="true">→</span></Link>
                 {entryByKey.has(recipe.recipeKey) && <div className="recipe-controls"><form action={editRecipeAction}>

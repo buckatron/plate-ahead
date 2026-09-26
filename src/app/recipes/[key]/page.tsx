@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { decodeRecipeText } from "@/domain/meals/recipe-jsonld";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { scaleQuantity } from "@/domain/meals/quantity";
@@ -46,7 +47,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
           <div>
             <p className="overline">{cuisine} · {recipe.role}</p>
             <h1>{recipe.title}</h1>
-            <p className="lead">{recipe.summary}</p>
+            <p className="lead">{decodeRecipeText(recipe.summary)}</p>
             <div className="recipe-meta"><span>{recipe.totalMinutes} min total</span><span>{recipe.activeMinutes > 0 ? `${recipe.activeMinutes} min active` : "Active time not specified"}</span><span>Serves {servings}</span></div>
           </div>
         </section>

@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { draftSchema } from "@/domain/meals/personal-recipe";
+import { draftSchema, manualDraftFromUrl } from "@/domain/meals/personal-recipe";
 import { prisma } from "@/services/prisma";
-import { importRecipeUrl, previewRecipeUrl } from "@/services/import-recipe";
+import { importRecipeUrl, previewRecipePage } from "@/services/import-recipe";
 import { createDraft, createRevisionDraft, pairPersonalRecipes, PersonalRecipeError, publishDraft, saveDraft, setRecipeArchived } from "@/services/personal-recipes";
 
 const errorText = (cause: unknown) => cause instanceof PersonalRecipeError ? cause.message : "Could not save the recipe. Please try again.";
@@ -15,15 +15,21 @@ export async function createRecipeDraftAction() {
   redirect(`/recipes/drafts/${draft.id}`);
 }
 
+export async function createRecipeDraftFromUrlAction(formData: FormData) {
+  const url = String(formData.get("url") ?? "").trim();
+  const payload = manualDraftFromUrl(url);
+  if (!payload) redirect(`/recipes/new?${new URLSearchParams({ importError: "Use a valid http or https source link without credentials or a custom port.", url })}`);
+  const draft = await createDraft("home", payload);
+  redirect(`/recipes/drafts/${draft.id}`);
+}
+
 export async function importRecipeAction(formData: FormData) {
   const url = String(formData.get("url") ?? "").trim();
   try {
     const selected = formData.get("selection");
-    if (selected === null) {
-      const choices = await previewRecipeUrl(url);
-      if (choices.length > 1) redirect(`/recipes/import/choose?url=${encodeURIComponent(url)}`);
-    }
-    const draft = await importRecipeUrl("home", url, selected === null ? 0 : Number(selected));
+    const preview = selected === null ? await previewRecipePage(url) : undefined;
+    if (preview && preview.recipes.length > 1) redirect(`/recipes/import/choose?url=${encodeURIComponent(url)}`);
+    const draft = await importRecipeUrl("home", url, selected === null ? 0 : Number(selected), preview);
     redirect(`/recipes/drafts/${draft.id}`);
   } catch (cause) {
     if (cause && typeof cause === "object" && "digest" in cause) throw cause;

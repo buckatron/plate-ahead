@@ -26,6 +26,6 @@ export function databasePath() {
   return path;
 }
 
-export function backupName(prefix = "misewell") {
+export function backupName(prefix = "plate-ahead") {
   return `${prefix}-${new Date().toISOString().replace(/[:.]/g, "-")}.db`;
 }

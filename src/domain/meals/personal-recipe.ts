@@ -49,6 +49,16 @@ export const blankDraft: RecipeDraftData = {
   storageGuidance: "", storageSourceUrl: "",
 };
 
+export function manualDraftFromUrl(rawUrl: string): RecipeDraftData | null {
+  if (rawUrl.length > 2000) return null;
+  try {
+    const url = new URL(rawUrl);
+    if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password || url.port) return null;
+    url.hash = "";
+    return { ...blankDraft, sourceUrl: url.href, sourceAttribution: url.hostname.replace(/^www\./i, "") };
+  } catch { return null; }
+}
+
 const fractions: Record<string, string> = { "½": "1/2", "⅓": "1/3", "⅔": "2/3", "¼": "1/4", "¾": "3/4", "⅛": "1/8" };
 const units: Record<string, { unit: Unit; factor: number }> = {
   g: { unit: "g", factor: 1 }, gram: { unit: "g", factor: 1 }, grams: { unit: "g", factor: 1 },

@@ -69,7 +69,7 @@ try {
         baseServings: recipe.baseServings,
         activeMinutes: recipe.activeMinutes,
         totalMinutes: recipe.totalMinutes,
-        sourceAttribution: "Original Misewell prototype recipe; not kitchen-tested",
+        sourceAttribution: "Original Plate Ahead prototype recipe; not kitchen-tested",
         reviewStatus: "reviewed",
         contentHash,
         tags: { create: recipe.tags },

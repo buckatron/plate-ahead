@@ -1,4 +1,4 @@
-# Misewell
+# Plate Ahead
 
 A private meal planning prototype for a household of two. The app is being built in checkpoints from [PLAN.md](PLAN.md).
 
@@ -18,13 +18,15 @@ The home-page sidebar now shows linked lunches still on accepted plans and confi
 
 ## Add your own recipes
 
-Open **Recipes → Add a recipe** to write a recipe or import a public recipe link. Link import reads the site's Schema.org recipe data into an editable draft. Save incomplete drafts and publish after confirming servings, total time, ingredient amounts, and steps. If a site blocks import or has no structured recipe data, start a manual draft and paste its ingredient and instruction text there. Imports do not execute page scripts or fetch images. The original source URL, author, and extracted recipe fields are kept with published versions.
+Open **Recipes → Add a recipe** to write a recipe or import a public recipe link. Link import reads the site's Schema.org recipe data into an editable draft. The app server needs outbound web access for this; opening the site in your browser is not enough if the server is running in a network-restricted environment. Save incomplete drafts and publish after confirming servings, total time, ingredient amounts, and steps. If a site blocks import or has no structured recipe data, choose **Continue manually with this link** to open a blank draft with the source URL preserved, then paste its ingredient and instruction text. Imports do not execute page scripts or fetch images. The original source URL, author, and extracted recipe fields are kept with published versions.
 
 The ingredient review lists parsed amounts and suggests grocery matches. Choose a category for new ingredients. `Salt to taste` and similar lines remain visible as **Check amount** on groceries, with a shopping check instead of a fabricated quantity. The parser assumes a 240 mL cup, a 15 mL tablespoon, and a 5 mL teaspoon; check imported measures against the source, especially for recipes using regional cup sizes. Ranges, package sizes, and ambiguous lines need manual correction.
 
 Published personal recipes appear in the library and can be used by the planner and dinner swaps. **Show only my recipes** removes the prototype catalog from new suggestions. You can pause a personal recipe in suggestions or archive it without changing meals already planned or cooked. Editing creates a new version; historical plans link to the version they used. To turn reserved dinner food into lunch, mark a recipe component reservable with sourced storage guidance, write a separate lunch recipe, and use **Link dinner to lunch**. Separate components let you scale only the reserved part.
 
 This is still a private, single-household app. Recipe import works best on pages with Schema.org Recipe JSON-LD; login-only pages, blocked sites, and arbitrary page layouts need manual paste. Source ingredient wording and storage advice require your review before cooking.
+
+The Love and Lemons lemon-orzo page has been tested as a live import. Some sites, including Serious Eats, Simply Recipes, and Allrecipes, returned HTTP 403 to the server during local checks; use the manual draft when a site blocks automatic access. Website behavior can change independently of the app.
 
 ## Run locally
 
@@ -66,13 +68,13 @@ If the app was already running, Next.js will usually apply code changes automati
 
 The history, cooldown, and local event update adds migrations. After pulling it, stop the app, run `npm run db:deploy` and `npm run db:generate`, then restart with `npm run dev`. No package reinstall is needed. To add new catalog recipes to an existing database, run `npm run db:seed` before restarting. Seeding preserves existing recipe versions and plan history.
 
-The local SQLite runtime uses Prisma’s official `@prisma/adapter-better-sqlite3`, which includes a native `better-sqlite3` binary. The first install can pause while npm downloads or builds that binary; later installs reuse npm’s cache. The repository `.npmrc` enables offline preference and disables audit/funding network calls so startup is not delayed by unrelated registry work. npm may still print `prebuild-install` and ESLint deprecation notices from upstream packages; they are transitive/toolchain notices and do not indicate a Misewell runtime error.
+The local SQLite runtime uses Prisma’s official `@prisma/adapter-better-sqlite3`, which includes a native `better-sqlite3` binary. The first install can pause while npm downloads or builds that binary; later installs reuse npm’s cache. The repository `.npmrc` enables offline preference and disables audit/funding network calls so startup is not delayed by unrelated registry work. npm may still print `prebuild-install` and ESLint deprecation notices from upstream packages; they are transitive/toolchain notices and do not indicate a Plate Ahead runtime error.
 
 Open `http://localhost:3000`.
 
 Prisma CLI, client, and SQLite adapter are pinned to version 7.10.0. This schema keeps the database URL in `prisma.config.ts`, as Prisma 7 requires. If a command reports Prisma 6, run `npm ci` in this project and check with `npx prisma --version` before migrating. Do not add `url` to `schema.prisma` to work around a version mismatch.
 
-Use `npm run db:migrate -- --name descriptive_change` only after changing the schema; a fresh setup applies the checked-in migrations with `npm run db:deploy`. The SQLite file is local and ignored by Git. Run `npm run typecheck`, `npm run lint`, and `npm test` after changes.
+Use `npm run db:migrate -- --name descriptive_change` only after changing the schema; a fresh setup applies the checked-in migrations with `npm run db:deploy`. The SQLite file is local and ignored by Git. Run `npm run typecheck`, `npm run lint`, and `npm test` after changes. `npm run test:integration` checks personal-recipe publishing and revision history against a temporary SQLite database; it does not touch your household data.
 
 If a development server was already running while `npm run db:generate` updated the Prisma client, restart that server before using the app.
 
@@ -83,13 +85,13 @@ If a development server was already running while `npm run db:generate` updated 
 To restore, stop the app and any database tools, then run:
 
 ```powershell
-npm run db:restore -- backups/misewell-YOUR-BACKUP.db
+npm run db:restore -- backups/plate-ahead-YOUR-BACKUP.db
 npm run db:deploy
 npm run db:generate
 npm run dev
 ```
 
-Restore accepts only a `.db` file inside this project's `backups/` folder, checks its SQLite integrity, and first saves the current database as `backups/before-restore-...db`. Restoring replaces the local database, including any plans and feedback created since the selected backup. The backup files contain all household data; keep them private. If the database uses active SQLite journal files, restore stops and asks you to close the app first.
+Restore accepts only a `.db` file inside this project's `backups/` folder, including backups made under the old `misewell-` name. It checks SQLite integrity and first saves the current database as `backups/before-restore-...db`. Restoring replaces the local database, including any plans and feedback created since the selected backup. The backup files contain all household data; keep them private. If the database uses active SQLite journal files, restore stops and asks you to close the app first.
 
 ## Current limits
 
