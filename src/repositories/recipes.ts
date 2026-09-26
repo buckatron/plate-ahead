@@ -34,6 +34,7 @@ export async function getRecipe(recipeKey: string, householdId = "home", version
       reviewStatus: "reviewed", OR: [{ entryId: null }, { entry: { householdId } }] },
     orderBy: { version: "desc" },
     include: {
+      entry: { select: { currentRecipeId: true } },
       tags: true,
       steps: { orderBy: { sequence: "asc" } },
       components: {

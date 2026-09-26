@@ -199,6 +199,10 @@ h3 { font-size: 18px; margin: 0 0 9px; }
 .recipe-hero h1 { max-width: 850px; font-size: clamp(43px, 5.8vw, 69px); }
 .recipe-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 23px; }
 .recipe-meta span { border-radius: 99px; background: #e7e9e0; color: #496451; padding: 8px 12px; font-size: 12px; font-weight: 700; }
+.recipe-edit-action { margin-top: 18px; }
+.recipe-edit-action button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; background: #397254; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.recipe-version-note { margin-top: 18px; color: #647266; font-size: 14px; }
+.recipe-version-note a { color: #397254; font-weight: 700; }
 .recipe-review { margin-top: 24px; padding: 16px 20px; border: 1px solid #d6ae7d; border-radius: 10px; background: #fff4e5; color: #694527; line-height: 1.5; }
 .recipe-review p { margin: 6px 0; }
 .recipe-review ul { margin: 8px 0 0; padding-left: 20px; }

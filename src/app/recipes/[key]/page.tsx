@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { editRecipeAction } from "@/app/recipes/actions";
 import { decodeRecipeText } from "@/domain/meals/recipe-jsonld";
 import { parseIngredientLine } from "@/domain/meals/personal-recipe";
 import { notFound } from "next/navigation";
@@ -38,6 +39,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   const scaled = scaleRecipe(recipe, servings, extraByComponent);
   const scaledLunch = lunchDetail ? scaleRecipe(lunchDetail.recipe, servings) : [];
   const cuisine = recipe.tags.find((tag) => tag.dimension === "cuisine")?.value ?? recipe.role;
+  const isCurrentPersonalRecipe = Boolean(recipe.entryId && recipe.entry?.currentRecipeId === recipe.id);
   const reviewLines = recipe.entryId ? recipe.components.flatMap((component) => component.ingredients.flatMap((ingredient) =>
     ingredient.originalText && parseIngredientLine(ingredient.originalText).kind === "error" ? [ingredient.originalText] : [])) : [];
 
@@ -52,12 +54,17 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             <h1>{recipe.title}</h1>
             <p className="lead">{decodeRecipeText(recipe.summary)}</p>
             <div className="recipe-meta"><span>{recipe.totalMinutes} min total</span><span>{recipe.activeMinutes > 0 ? `${recipe.activeMinutes} min active` : "Active time not specified"}</span><span>Serves {servings}</span></div>
+            {isCurrentPersonalRecipe && <form action={editRecipeAction} className="recipe-edit-action">
+              <input type="hidden" name="entryId" value={recipe.entryId!} />
+              <button type="submit">Edit this recipe</button>
+            </form>}
+            {recipe.entryId && !isCurrentPersonalRecipe && <p className="recipe-version-note">Viewing version {recipe.version}. <Link href={`/recipes/${recipe.recipeKey}`}>See the current recipe →</Link></p>}
           </div>
         </section>
 
         {reviewLines.length > 0 && <div className="recipe-review" role="alert">
           <strong>Check these ingredient amounts before shopping or cooking.</strong>
-          <p>These saved lines may include a range, an alternative, or an optional amount. Edit this recipe from the library to choose clear amounts:</p>
+          <p>These saved lines may include a range, an alternative, or an optional amount. {isCurrentPersonalRecipe ? "Use Edit this recipe above to choose clear amounts:" : "Check the current recipe before planning another week:"}</p>
           <ul>{reviewLines.map((line, index) => <li key={`${index}:${line}`}>{line}</li>)}</ul>
         </div>}
 

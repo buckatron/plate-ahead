@@ -72,7 +72,11 @@ describe("personal recipe persistence", () => {
     const { listDinnerRecipes, getRecipe } = await import("../../src/repositories/recipes");
     expect((await listDinnerRecipes("home")).filter((recipe) => recipe.recipeKey === key).map((recipe) => recipe.title))
       .toEqual(["Crispy eggs with herbs"]);
-    expect((await getRecipe(key, "home", 1))?.recipe.title).toBe("Crispy eggs");
+    const current = await getRecipe(key, "home");
+    const historical = await getRecipe(key, "home", 1);
+    expect(current?.recipe.entry?.currentRecipeId).toBe(current?.recipe.id);
+    expect(historical?.recipe.title).toBe("Crispy eggs");
+    expect(historical?.recipe.entry?.currentRecipeId).not.toBe(historical?.recipe.id);
     await expect(recipes.publishDraft("home", revision.id, revision.revision + 1)).rejects.toThrow("draft changed");
   }, 30_000);
 
