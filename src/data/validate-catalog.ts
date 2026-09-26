@@ -24,6 +24,7 @@ export function validateCatalog(): void {
     if (!recipe.title.trim() || !recipe.summary.trim() || recipe.baseServings <= 0 || recipe.activeMinutes <= 0 || recipe.totalMinutes < recipe.activeMinutes) {
       throw new Error(`Incomplete recipe metadata: ${recipe.key}`);
     }
+    if (recipe.sourceUrl && (!recipe.sourceAttribution || !/^https:\/\//.test(recipe.sourceUrl))) throw new Error(`Invalid source attribution: ${recipe.key}`);
     if (recipe.role === "dinner" && recipe.totalMinutes > 60) throw new Error(`Dinner exceeds the default time limit: ${recipe.key}`);
     if (recipe.components.length === 0 || recipe.steps.length === 0 || recipe.tags.length < 3) throw new Error(`Incomplete recipe: ${recipe.key}`);
     const components = new Map(recipe.components.map((component) => [component.key, component]));

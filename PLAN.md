@@ -252,7 +252,7 @@ Acceptance: a new local database can be created and seeded from documented comma
 
 ### Phase 2: Reviewed recipe and transformation catalog
 
-Current catalog: 24 dinners and 8 transformed lunches are seeded and browsable. Four disjoint six-dinner selections, each with two transformed lunches, are covered by catalog tests. The recipes are original prototype formulations with structural and food-safety checks; they have not been kitchen-tested.
+Current catalog: 32 dinners (24 original prototypes and 8 source-backed adaptations) and 8 transformed lunches are seeded and browsable. Four disjoint six-dinner selections, each with two transformed lunches, are covered by catalog tests. The original prototypes and source-backed adaptations have structural and food-safety checks; the Plate Ahead versions have not been kitchen-tested.
 
 - [x] Seed 24 varied dinner recipes and 8 reviewed lunch transformations, with complete quantities, steps, tags, timings, and provenance.
 - [x] Ensure the catalog can generate at least two distinct six-dinner weeks with the default lunch targets.

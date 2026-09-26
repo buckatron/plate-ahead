@@ -11,7 +11,7 @@ describe("recipe catalog", () => {
   });
   it("contains complete, compatible recipes and transformations", () => {
     expect(() => validateCatalog()).not.toThrow();
-    expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(24);
+    expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(32);
     expect(recipes.filter((recipe) => recipe.role === "lunch")).toHaveLength(8);
     expect(transformations).toHaveLength(8);
   });

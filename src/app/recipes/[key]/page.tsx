@@ -105,6 +105,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
           <aside className="recipe-side">
             {lunchLink?.target && <div className="panel lunch-panel"><span className="overline">Leftover lunch</span><h2>{lunchLink.target.title}</h2><p>{lunchLink.transformation.description}</p><Link className="text-link" href={`/recipes/${lunchLink.target.recipeKey}`}>View lunch recipe →</Link></div>}
             <div className="panel safety-panel"><h2>Kitchen notes</h2><p>{recipe.sourceAttribution}</p>
+              {recipe.sourceUrl && <p><a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer">View the original recipe ↗</a></p>}
               {recipe.components.filter((component) => component.storageGuidance).map((component) => <p key={component.id}>{component.storageGuidance} <a href={component.storageSourceUrl ?? "https://www.foodsafety.gov/"} target="_blank" rel="noreferrer">Storage guidance</a></p>)}
               <p>Check meat, fish, and reheated leftovers with a thermometer. <a href="https://www.foodsafety.gov/food-safety-charts/safe-minimum-internal-temperatures" target="_blank" rel="noreferrer">Safe temperatures</a></p>
             </div>

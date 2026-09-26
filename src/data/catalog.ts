@@ -1,5 +1,6 @@
 import type { Unit } from "@/domain/meals/quantity";
 import { extraRecipes, extraTransformations } from "./catalog-extra";
+import { sourcedRecipes } from "./catalog-sourced";
 
 export type CatalogAmount = { amount: number; unit: Unit };
 export type CatalogIngredient = { key: string; name: string; category: string; defaultUnit: Unit };
@@ -18,6 +19,8 @@ export type CatalogRecipe = {
   version: number;
   title: string;
   summary: string;
+  sourceUrl?: string;
+  sourceAttribution?: string;
   role: "dinner" | "lunch";
   baseServings: number;
   activeMinutes: number;
@@ -97,9 +100,34 @@ export const ingredients: CatalogIngredient[] = [
   { key: "cumin", name: "Ground cumin", category: "Pantry", defaultUnit: "g" },
   { key: "salt", name: "Salt", category: "Pantry", defaultUnit: "g" },
   { key: "pepper", name: "Black pepper", category: "Pantry", defaultUnit: "g" },
+  { key: "chicken-breast", name: "Boneless chicken breast", category: "Meat & seafood", defaultUnit: "g" },
+  { key: "cherry-tomatoes", name: "Cherry tomatoes", category: "Produce", defaultUnit: "g" },
+  { key: "oregano", name: "Dried oregano", category: "Pantry", defaultUnit: "g" },
+  { key: "kalamata-olives", name: "Kalamata olives", category: "Canned goods", defaultUnit: "g" },
+  { key: "carrots", name: "Carrots", category: "Produce", defaultUnit: "g" },
+  { key: "sriracha", name: "Sriracha", category: "Pantry", defaultUnit: "ml" },
+  { key: "brown-sugar", name: "Brown sugar", category: "Pantry", defaultUnit: "g" },
+  { key: "peanuts", name: "Roasted peanuts", category: "Pantry", defaultUnit: "g" },
+  { key: "butter", name: "Butter", category: "Dairy", defaultUnit: "g" },
+  { key: "parmesan", name: "Parmesan", category: "Dairy", defaultUnit: "g" },
+  { key: "milk", name: "Milk", category: "Dairy", defaultUnit: "ml" },
+  { key: "cream-cheese", name: "Cream cheese", category: "Dairy", defaultUnit: "g" },
+  { key: "basil-pesto", name: "Basil pesto", category: "Pantry", defaultUnit: "g" },
+  { key: "kale", name: "Kale", category: "Produce", defaultUnit: "g" },
+  { key: "chipotle-adobo", name: "Chipotle peppers in adobo", category: "Canned goods", defaultUnit: "g" },
+  { key: "balsamic-vinegar", name: "Balsamic vinegar", category: "Pantry", defaultUnit: "ml" },
+  { key: "panko", name: "Panko breadcrumbs", category: "Dry goods", defaultUnit: "g" },
+  { key: "burger-buns", name: "Burger buns", category: "Bread", defaultUnit: "each" },
+  { key: "mayonnaise", name: "Mayonnaise", category: "Pantry", defaultUnit: "g" },
+  { key: "dijon", name: "Dijon mustard", category: "Pantry", defaultUnit: "g" },
+  { key: "red-wine-vinegar", name: "Red wine vinegar", category: "Pantry", defaultUnit: "ml" },
+  { key: "thyme", name: "Dried thyme", category: "Pantry", defaultUnit: "g" },
+  { key: "cayenne", name: "Cayenne pepper", category: "Pantry", defaultUnit: "g" },
+  { key: "corn-tortillas", name: "Small corn tortillas", category: "Bread", defaultUnit: "each" },
 ];
 
 export const recipes: CatalogRecipe[] = [
+  ...sourcedRecipes,
   ...extraRecipes,
   {
     key: "citrus-roast-chicken", version: 1, title: "Citrus roast chicken & herby yogurt",
