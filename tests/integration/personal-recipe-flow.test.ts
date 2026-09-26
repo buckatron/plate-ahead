@@ -57,8 +57,7 @@ describe("personal recipe persistence", () => {
     expect(first.components[0].ingredients[0]).toMatchObject({ quantityMilli: 2000, unit: "each" });
     expect(await prisma.recipeDraft.findUnique({ where: { id: draft.id } })).toBeNull();
 
-    const entry = await prisma.recipeEntry.findUniqueOrThrow({ where: { recipeKey: key } });
-    const revision = await recipes.createRevisionDraft("home", entry.id);
+    const revision = await recipes.createRevisionDraft("home", key);
     const editable = await recipes.findDraft("home", revision.id);
     expect(editable?.payload.title).toBe("Crispy eggs");
     await recipes.saveDraft("home", revision.id, revision.revision, { ...editable!.payload,
@@ -144,7 +143,7 @@ describe("personal recipe persistence", () => {
       expectedRevision: 0, reaction: "loved", effort: "easy", leftovers: null });
 
     const entry = await prisma.recipeEntry.findUniqueOrThrow({ where: { recipeKey: manualKey } });
-    const revision = await recipes.createRevisionDraft(householdId, entry.id);
+    const revision = await recipes.createRevisionDraft(householdId, manualKey);
     const editable = await recipes.findDraft(householdId, revision.id);
     await recipes.saveDraft(householdId, revision.id, revision.revision,
       { ...editable!.payload, title: "Tomato rice with herbs" });

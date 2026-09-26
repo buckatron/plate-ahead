@@ -4,6 +4,8 @@ coverage/
 src/generated/
 /dev.db*
 /backups/
+/docker-data/
+/docker-backups/
 prisma/dev.db*
 .env*
 !.env.example

@@ -9,7 +9,7 @@ if (!sourceArg) throw new Error("Pass the path to a .db file in the backups dire
 const sourcePath = isAbsolute(sourceArg) ? resolve(sourceArg) : resolve(process.cwd(), sourceArg);
 if (!within(backupDirectory, sourcePath) || !sourcePath.endsWith(".db") || !existsSync(sourcePath) ||
   !within(realpathSync(backupDirectory), realpathSync(sourcePath))) {
-  throw new Error("Choose an existing .db file inside this project's backups directory.");
+  throw new Error(`Choose an existing .db file inside ${backupDirectory}.`);
 }
 const destinationPath = databasePath();
 if (existsSync(destinationPath) && lstatSync(destinationPath).isSymbolicLink()) {

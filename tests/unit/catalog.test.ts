@@ -11,7 +11,7 @@ describe("recipe catalog", () => {
   });
   it("contains complete, compatible recipes and transformations", () => {
     expect(() => validateCatalog()).not.toThrow();
-    expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(32);
+    expect(recipes.filter((recipe) => recipe.role === "dinner")).toHaveLength(48);
     expect(recipes.filter((recipe) => recipe.role === "lunch")).toHaveLength(8);
     expect(transformations).toHaveLength(8);
   });
@@ -60,8 +60,8 @@ describe("recipe catalog", () => {
     const yogurt = scaled.find((component) => component.id === "yogurt")!;
 
     expect(chicken.extraYieldMilli).toBe(200_000);
-    expect(chicken.ingredients.find((item) => item.ingredient.name === "chicken-thighs")?.scaled.milli).toBe(666_667);
+    expect(chicken.ingredients.find((item) => item.ingredient.name === "chicken-thighs")?.scaled.milli).toBe(1_066_667);
     expect(potatoes.ingredients.find((item) => item.ingredient.name === "potatoes")?.scaled.milli).toBe(500_000);
-    expect(yogurt.ingredients.find((item) => item.ingredient.name === "yogurt")?.scaled.milli).toBe(150_000);
+    expect(yogurt.ingredients.find((item) => item.ingredient.name === "yogurt")?.scaled.milli).toBe(100_000);
   });
 });

@@ -80,9 +80,50 @@ Use `npm run db:migrate -- --name descriptive_change` only after changing the sc
 
 If a development server was already running while `npm run db:generate` updated the Prisma client, restart that server before using the app.
 
+## Deploy privately with Docker Compose
+
+This deployment is for one household on one server. It keeps SQLite on that server's **local disk**. The app has no sign-in: do not forward port 3000 from your router or publish it on an unrestricted domain. For remote access, use Tailscale or a reverse proxy reachable only from your LAN and tailnet. The container needs outbound internet access for recipe URL import.
+
+The server needs Docker Engine and the Compose plugin. Clone this repository onto the server, then run these commands from the checkout. The container runs as UID/GID 1000; if that ID is already used differently on your server, adjust directory ownership to match the container user.
+
+```sh
+sudo install -d -m 700 -o 1000 -g 1000 docker-data docker-backups
+docker compose build
+docker compose run --rm app npm run db:deploy
+docker compose run --rm app npm run db:seed
+docker compose up -d
+```
+
+By default, Compose publishes only `127.0.0.1:3000` on the Docker host. Point Tailscale Serve or your private reverse proxy at that address. For direct LAN access without a proxy, set `PLATE_AHEAD_BIND` to the server's **LAN IP address** when running Compose (or in a server-only `.env` beside `compose.yaml`), and restrict access with the host firewall. Do not set it to `0.0.0.0` unless you have independently verified that the port cannot be reached from the public internet. The container's SQLite file is in `docker-data/`; consistent backups are written to `docker-backups/`. Both directories are ignored by Git and must remain mounted when the container is replaced. Do not put the live database on an NFS or SMB share. Do not run more than one app replica against it.
+
+If you want to bring your existing local plans and recipes to the server, first run `npm run db:backup` on your current machine. Copy the resulting `.db` file into the server's `docker-backups/` directory and ensure UID 1000 can read it (for example, `sudo chown 1000:1000 docker-backups/plate-ahead-YOUR-BACKUP.db && chmod 600 docker-backups/plate-ahead-YOUR-BACKUP.db`). **Before the first `docker compose up -d`**, restore that file with the app stopped:
+
+```sh
+docker compose run --rm app npm run db:restore -- /app/backups/plate-ahead-YOUR-BACKUP.db
+docker compose run --rm app npm run db:deploy
+docker compose run --rm app npm run db:seed
+docker compose up -d
+```
+
+For an update, use the current image to back up first, then stop the app before applying migrations. Seeding adds new bundled recipes without replacing your household recipes or history:
+
+```sh
+docker compose exec app npm run db:backup
+docker compose stop app
+git pull
+docker compose build
+docker compose run --rm app npm run db:deploy
+docker compose run --rm app npm run db:seed
+docker compose up -d
+```
+
+When nothing has changed and the database is already initialized, just run `docker compose up -d`. To restore an older backup later, stop the app, then run `docker compose run --rm app npm run db:restore -- /app/backups/NAME.db`, followed by `db:deploy`, `db:seed`, and `docker compose up -d` as above. Restore first saves the current database under `docker-backups/before-restore-...db`, but it replaces changes made since the selected backup. Copy backups to another device or backup service on a schedule; a bind mount alone does not protect against host failure. Keep backup files private because they contain your household data. Never run `docker compose down -v` as part of routine updates.
+
+This image includes the Prisma CLI and seed tool so the same Compose service can run one-off maintenance commands. The native SQLite dependency is installed inside the Linux image; do not mount Windows `node_modules` into it.
+
 ## Back up or restore your local data
 
-`npm run db:backup` creates a consistent SQLite copy in the ignored `backups/` folder. Copy that `.db` file somewhere else for safekeeping; Git does not include it. Back up before upgrading or changing machines.
+`npm run db:backup` creates a consistent SQLite copy in the ignored `backups/` folder. Set `BACKUP_DIR` to an absolute path to use another backup directory; an absolute SQLite `DATABASE_URL` such as `file:/app/data/plate-ahead.db` is also supported. Copy that `.db` file somewhere else for safekeeping; Git does not include it. Back up before upgrading or changing machines.
 
 To restore, stop the app and any database tools, then run:
 

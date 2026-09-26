@@ -2,7 +2,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve, relative, isAbsolute, join, sep } from "node:path";
 
 export const projectRoot = resolve(import.meta.dirname, "..");
-export const backupDirectory = join(projectRoot, "backups");
+if (process.env.BACKUP_DIR && !isAbsolute(process.env.BACKUP_DIR)) {
+  throw new Error("BACKUP_DIR must be an absolute path.");
+}
+export const backupDirectory = process.env.BACKUP_DIR
+  ? resolve(process.env.BACKUP_DIR)
+  : join(projectRoot, "backups");
 
 export function within(root, target) {
   const path = relative(root, target);
@@ -16,12 +21,19 @@ export function databasePath() {
       .find((item) => /^\s*DATABASE_URL\s*=/.test(item));
     url = line?.split("=").slice(1).join("=").trim().replace(/^(?:"([^"]*)"|'([^']*)')$/, "$1$2");
   }
-  if (!url?.startsWith("file:./") || url.includes("?") || url.includes("#")) {
-    throw new Error("DATABASE_URL must point to a local SQLite file such as file:./dev.db.");
+  if (!url?.startsWith("file:") || url.includes("?") || url.includes("#")) {
+    throw new Error("DATABASE_URL must point to a SQLite file such as file:./dev.db or file:/app/data/plate-ahead.db.");
   }
-  const path = resolve(projectRoot, url.slice("file:".length));
-  if (!within(projectRoot, path) || !path.endsWith(".db")) {
-    throw new Error("The SQLite database must be a .db file inside this project.");
+  const filePath = url.slice("file:".length);
+  if (!filePath || filePath.startsWith("//") || filePath.includes("\0")) {
+    throw new Error("DATABASE_URL must name a local SQLite .db file.");
+  }
+  const path = resolve(projectRoot, filePath);
+  if (!isAbsolute(filePath) && !within(projectRoot, path)) {
+    throw new Error("A relative SQLite database path must stay inside this project.");
+  }
+  if (!path.endsWith(".db") || path === backupDirectory || within(backupDirectory, path)) {
+    throw new Error("The SQLite database must be a .db file outside the backups directory.");
   }
   return path;
 }

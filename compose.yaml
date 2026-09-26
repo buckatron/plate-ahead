@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    image: plate-ahead:local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/plate-ahead.db
+      BACKUP_DIR: /app/backups
+    ports:
+      - "${PLATE_AHEAD_BIND:-127.0.0.1}:3000:3000"
+    volumes:
+      - type: bind
+        source: ./docker-data
+        target: /app/data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./docker-backups
+        target: /app/backups
+        bind:
+          create_host_path: false
