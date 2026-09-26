@@ -28,15 +28,30 @@ export async function saveDraft(householdId: string, id: string, revision: numbe
   if (result.count !== 1) throw new PersonalRecipeError("This draft changed. Refresh it before saving.");
 }
 
-export async function createRevisionDraft(householdId: string, entryId: string) {
-  const entry = await prisma.recipeEntry.findFirst({ where: { id: entryId, householdId },
-    include: { versions: { orderBy: { version: "desc" }, take: 1, include: {
-      tags: true, steps: { orderBy: { sequence: "asc" } },
-      components: { include: { ingredients: { include: { ingredient: true } } } },
-    } } } });
-  const recipe = entry?.versions[0];
-  if (!entry || !recipe) throw new PersonalRecipeError("Recipe not found.");
-  const activeDraft = await prisma.recipeDraft.findFirst({ where: { householdId, entryId }, orderBy: { updatedAt: "desc" } });
+export async function ensureRecipeEntry(householdId: string, recipeKey: string) {
+  let entry = await prisma.recipeEntry.findUnique({ where: { recipeKey } });
+  if (entry && entry.householdId !== householdId) throw new PersonalRecipeError("Recipe not found.");
+  if (!entry) {
+    const starter = await prisma.recipe.findFirst({ where: { recipeKey, entryId: null, reviewStatus: "reviewed" },
+      orderBy: { version: "desc" } });
+    if (!starter) throw new PersonalRecipeError("Recipe not found.");
+    entry = await prisma.recipeEntry.upsert({ where: { recipeKey }, update: {},
+      create: { householdId, recipeKey, origin: "manual", currentRecipeId: starter.id } });
+    if (entry.householdId !== householdId) throw new PersonalRecipeError("Recipe not found.");
+  }
+  return entry;
+}
+
+export async function createRevisionDraft(householdId: string, recipeKey: string) {
+  const entry = await ensureRecipeEntry(householdId, recipeKey);
+  const recipe = await prisma.recipe.findFirst({ where: { id: entry.currentRecipeId ?? "", recipeKey,
+    OR: [{ entryId: null }, { entryId: entry.id }] }, include: {
+    tags: true, steps: { orderBy: { sequence: "asc" } },
+    components: { include: { ingredients: { include: { ingredient: true } } } },
+  } });
+  if (!recipe) throw new PersonalRecipeError("Recipe not found.");
+  const activeDraft = await prisma.recipeDraft.findFirst({ where: { householdId, entryId: entry.id,
+    basedOnRecipeId: recipe.id }, orderBy: { updatedAt: "desc" } });
   if (activeDraft) return activeDraft;
   const linesFor = (component: typeof recipe.components[number]) => component.ingredients.map((item) =>
     item.originalText ?? (item.quantityMilli === null ? `${item.ingredient.name} to taste` :
@@ -54,12 +69,14 @@ export async function createRevisionDraft(householdId: string, entryId: string) 
       reservable: component.reservable, storageGuidance: component.storageGuidance ?? "",
       storageSourceUrl: component.storageSourceUrl ?? "" })) : [],
     steps: recipe.steps.map((step) => step.text), sourceUrl: recipe.sourceUrl ?? "",
-    sourceAttribution: recipe.sourceAttribution ?? "", originalYield: "", origin: entry.origin === "url_import" ? "url_import" : "manual",
+    sourceAttribution: recipe.entryId ? recipe.sourceAttribution ?? "" :
+      `Household-edited version of ${recipe.sourceAttribution ?? "a starter recipe"}`.slice(0, 300),
+    originalYield: "", origin: entry.origin === "url_import" ? "url_import" : "manual",
     reservable: recipe.components[0]?.reservable ?? false,
     storageGuidance: recipe.components[0]?.storageGuidance ?? "",
     storageSourceUrl: recipe.components[0]?.storageSourceUrl ?? "",
   };
-  return prisma.recipeDraft.create({ data: { householdId, entryId, basedOnRecipeId: recipe.id,
+  return prisma.recipeDraft.create({ data: { householdId, entryId: entry.id, basedOnRecipeId: recipe.id,
     payloadJson: JSON.stringify(payload), sourceSnapshotJson: recipe.sourceSnapshotJson } });
 }
 
@@ -84,7 +101,7 @@ export async function publishDraft(householdId: string, id: string, revision: nu
       throw new PersonalRecipeError("This recipe was updated elsewhere. Refresh your draft.");
     }
     if (!entry) await tx.recipeEntry.create({ data: { id: entryId, householdId, recipeKey, origin: payload.origin } });
-    const version = entry ? (await tx.recipe.aggregate({ where: { entryId }, _max: { version: true } }))._max.version! + 1 : 1;
+    const version = entry ? ((await tx.recipe.aggregate({ where: { recipeKey }, _max: { version: true } }))._max.version ?? 0) + 1 : 1;
     const allIngredients = await tx.ingredient.findMany();
     const componentRows = [];
     for (const [componentIndex, component] of componentSpecs.entries()) {
@@ -121,6 +138,8 @@ export async function publishDraft(householdId: string, id: string, revision: nu
         storageGuidance: component.storageGuidance || null, storageSourceUrl: component.storageSourceUrl || null,
         ingredients: { create: items } });
     }
+    const priorTags = row.basedOnRecipeId ? await tx.recipeTag.findMany({ where: { recipeId: row.basedOnRecipeId } }) : [];
+    const carriedTags = priorTags.filter((tag) => tag.dimension !== "cuisine").map(({ dimension, value }) => ({ dimension, value }));
     const hash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
     await tx.recipe.create({ data: {
       id: recipeId, entryId, recipeKey, version, title: payload.title,
@@ -130,10 +149,54 @@ export async function publishDraft(householdId: string, id: string, revision: nu
       sourceAttribution: payload.sourceAttribution || "Written in your kitchen",
       reviewStatus: "reviewed", contentHash: hash,
       sourceSnapshotJson: row.sourceSnapshotJson,
-      tags: payload.cuisine ? { create: [{ dimension: "cuisine", value: payload.cuisine }] } : undefined,
+      tags: { create: [...(payload.cuisine ? [{ dimension: "cuisine", value: payload.cuisine }] : []), ...carriedTags] },
       components: { create: componentRows },
       steps: { create: payload.steps.map((text, index) => ({ sequence: index + 1, text })) },
     } });
+    if (row.basedOnRecipeId) {
+      const [previousComponents, nextComponents] = await Promise.all([
+        tx.recipeComponent.findMany({ where: { recipeId: row.basedOnRecipeId }, include: {
+          sourceTransformations: { include: { inputs: true } },
+          transformationInputs: { include: { transformation: { include: { inputs: true } } } },
+        } }),
+        tx.recipeComponent.findMany({ where: { recipeId } }),
+      ]);
+      const matching = (old: typeof previousComponents[number]) => {
+        const candidates = nextComponents.filter((next) => next.name === old.name && next.yieldUnit === old.yieldUnit);
+        return candidates.length === 1 ? candidates[0] : null;
+      };
+      for (const old of previousComponents) {
+        const next = matching(old);
+        if (!next) continue;
+        for (const link of old.sourceTransformations) {
+          if (!next.reservable || !next.storageGuidance || !next.storageSourceUrl ||
+            link.inputs.some((input) => input.unit !== next.yieldUnit || input.requiredMilli > next.baseYieldMilli)) continue;
+          await tx.transformation.create({ data: {
+            sourceComponentId: next.id, targetRecipeKey: link.targetRecipeKey,
+            description: link.description, compatibleState: link.compatibleState,
+            storageGuidance: next.storageGuidance, storageSourceUrl: next.storageSourceUrl,
+            inputs: { create: link.inputs.map((input) => ({ targetComponentId: input.targetComponentId,
+              requiredMilli: input.requiredMilli, unit: input.unit })) },
+          } });
+        }
+      }
+      const incoming = new Map(previousComponents.flatMap((component) => component.transformationInputs
+        .map((input) => [input.transformation.id, input.transformation] as const)));
+      for (const link of incoming.values()) {
+        const mappedInputs = link.inputs.map((input) => {
+          const old = previousComponents.find((component) => component.id === input.targetComponentId);
+          return { targetComponentId: old ? matching(old)?.id : input.targetComponentId,
+            requiredMilli: input.requiredMilli, unit: input.unit };
+        });
+        if (mappedInputs.some((input) => !input.targetComponentId)) continue;
+        await tx.transformation.create({ data: {
+          sourceComponentId: link.sourceComponentId, targetRecipeKey: recipeKey,
+          description: link.description, compatibleState: link.compatibleState,
+          storageGuidance: link.storageGuidance, storageSourceUrl: link.storageSourceUrl,
+          inputs: { create: mappedInputs.map((input) => ({ ...input, targetComponentId: input.targetComponentId! })) },
+        } });
+      }
+    }
     await tx.recipeEntry.update({ where: { id: entryId }, data: { currentRecipeId: recipeId, archivedAt: null } });
     await tx.recipeDraft.delete({ where: { id } });
   });

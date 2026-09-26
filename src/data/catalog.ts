@@ -1,6 +1,7 @@
 import type { Unit } from "@/domain/meals/quantity";
 import { extraRecipes, extraTransformations } from "./catalog-extra";
 import { sourcedRecipes } from "./catalog-sourced";
+import { replaceLegacyRecipes } from "./catalog-replacements";
 
 export type CatalogAmount = { amount: number; unit: Unit };
 export type CatalogIngredient = { key: string; name: string; category: string; defaultUnit: Unit };
@@ -124,10 +125,36 @@ export const ingredients: CatalogIngredient[] = [
   { key: "thyme", name: "Dried thyme", category: "Pantry", defaultUnit: "g" },
   { key: "cayenne", name: "Cayenne pepper", category: "Pantry", defaultUnit: "g" },
   { key: "corn-tortillas", name: "Small corn tortillas", category: "Bread", defaultUnit: "each" },
+  { key: "flour", name: "All-purpose flour", category: "Dry goods", defaultUnit: "g" },
+  { key: "lima-beans", name: "Lima beans", category: "Frozen", defaultUnit: "g" },
+  { key: "diced-tomatoes", name: "Canned diced tomatoes", category: "Canned goods", defaultUnit: "g" },
+  { key: "chili-flakes", name: "Red pepper flakes", category: "Pantry", defaultUnit: "g" },
+  { key: "allspice", name: "Ground allspice", category: "Pantry", defaultUnit: "g" },
+  { key: "fresh-tomatoes", name: "Fresh tomatoes", category: "Produce", defaultUnit: "g" },
+  { key: "butter-lettuce", name: "Butter lettuce", category: "Produce", defaultUnit: "each" },
+  { key: "sweet-chili-sauce", name: "Sweet chili sauce", category: "Pantry", defaultUnit: "ml" },
+  { key: "breadcrumbs", name: "Breadcrumbs", category: "Dry goods", defaultUnit: "g" },
+  { key: "cornstarch", name: "Cornstarch", category: "Pantry", defaultUnit: "g" },
+  { key: "curry-powder", name: "Curry powder", category: "Pantry", defaultUnit: "g" },
+  { key: "dashi", name: "Dashi stock", category: "Canned goods", defaultUnit: "ml" },
+  { key: "mirin", name: "Mirin", category: "Pantry", defaultUnit: "ml" },
+  { key: "dill", name: "Fresh dill", category: "Produce", defaultUnit: "g" },
+  { key: "peas", name: "Frozen peas", category: "Frozen", defaultUnit: "g" },
+  { key: "turmeric", name: "Ground turmeric", category: "Pantry", defaultUnit: "g" },
+  { key: "garam-masala", name: "Garam masala", category: "Pantry", defaultUnit: "g" },
+  { key: "chili-powder", name: "Chili powder", category: "Pantry", defaultUnit: "g" },
+  { key: "cilantro", name: "Fresh cilantro", category: "Produce", defaultUnit: "g" },
+  { key: "sesame-seeds", name: "Sesame seeds", category: "Pantry", defaultUnit: "g" },
+  { key: "beef-strips", name: "Beef stir-fry strips", category: "Meat & seafood", defaultUnit: "g" },
+  { key: "roasted-peppers", name: "Jarred roasted peppers", category: "Canned goods", defaultUnit: "g" },
+  { key: "oyster-sauce", name: "Oyster sauce", category: "Pantry", defaultUnit: "ml" },
+  { key: "salsa-verde", name: "Salsa verde", category: "Pantry", defaultUnit: "g" },
+  { key: "green-chiles", name: "Canned green chiles", category: "Canned goods", defaultUnit: "g" },
+  { key: "bbq-sauce", name: "Barbecue sauce", category: "Pantry", defaultUnit: "g" },
+  { key: "mint", name: "Fresh mint", category: "Produce", defaultUnit: "g" },
 ];
 
-export const recipes: CatalogRecipe[] = [
-  ...sourcedRecipes,
+const legacyRecipes: CatalogRecipe[] = [
   ...extraRecipes,
   {
     key: "citrus-roast-chicken", version: 1, title: "Citrus roast chicken & herby yogurt",
@@ -356,14 +383,16 @@ export const recipes: CatalogRecipe[] = [
   },
 ];
 
+export const recipes: CatalogRecipe[] = [...sourcedRecipes, ...replaceLegacyRecipes(legacyRecipes, ingredients)];
+
 export const transformations: CatalogTransformation[] = [
   ...extraTransformations,
   { key: "chicken-to-quesadillas", sourceRecipeKey: "citrus-roast-chicken", sourceComponentKey: "chicken", targetRecipeKey: "chicken-bean-quesadillas", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
-    description: "Reserve plain chicken before adding yogurt, then make smoky, crisp quesadillas for lunch.", compatibleState: "Cooked, plain chicken", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
+    description: "Reserve cooked chicken before adding yogurt, then make crisp barbecue quesadillas for lunch.", compatibleState: "Cooked chicken without yogurt", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
   { key: "tofu-to-wraps", sourceRecipeKey: "coconut-ginger-tofu", sourceComponentKey: "tofu", targetRecipeKey: "peanut-tofu-wraps", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
     description: "Reserve golden tofu before it goes into curry, then add crunch and peanut-lime sauce for lunch.", compatibleState: "Cooked tofu before curry sauce", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
   { key: "beans-to-pitas", sourceRecipeKey: "tomato-white-bean-pasta", sourceComponentKey: "beans", targetRecipeKey: "white-bean-cucumber-pitas", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
-    description: "Save plain beans before saucing the pasta, then crisp them for cool cucumber pitas.", compatibleState: "Drained, unsauced white beans", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
+    description: "Save plain beans before saucing the pasta, then mash them for cool cucumber pitas.", compatibleState: "Drained, unsauced white beans", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
   { key: "sweet-potato-to-hash", sourceRecipeKey: "sweet-potato-enchiladas", sourceComponentKey: "sweet-potato", targetRecipeKey: "sweet-potato-egg-hash", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
     description: "Save plain sweet potato before filling enchiladas, then crisp it with eggs and greens for lunch.", compatibleState: "Cooked, plain sweet potato", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
 ];

@@ -17,6 +17,8 @@ export default async function RecipeDraftPage({ params, searchParams }: {
   const draft = await findDraft("home", id);
   if (!draft) notFound();
   const recipe = draft.payload;
+  const basedOn = draft.basedOnRecipeId ? await prisma.recipe.findUnique({ where: { id: draft.basedOnRecipeId },
+    select: { version: true, entryId: true } }) : null;
   const sourceSnapshot = draft.sourceSnapshotJson ? JSON.parse(draft.sourceSnapshotJson) as {
     title?: string; yieldText?: string; ingredientLines?: string[]; steps?: string[];
   } : null;
@@ -30,6 +32,8 @@ export default async function RecipeDraftPage({ params, searchParams }: {
     <div className="recipe-breadcrumb"><Link href="/recipes">← Recipes</Link></div>
     <section className="library-heading"><p className="overline">Editable draft</p><h1>{recipe.title || "New recipe"}</h1>
       <p className="lead">Save at any point. Publish when the amounts, servings and steps are ready for planning.</p></section>
+    {basedOn && <p className="recipe-version-note">Editing version {basedOn.version}. Publishing creates a new version; meals already planned or cooked keep their original recipe.</p>}
+    {basedOn && !basedOn.entryId && <p className="recipe-version-note">This is a starter recipe. Your changes will become your household’s version.</p>}
     {saved && <p role="status">Draft saved.</p>}{error && <p className="plan-error" role="alert">{error}</p>}
     {sourceSnapshot && <details className="panel recipe-section"><summary>Original imported recipe text</summary>
       <h2>{sourceSnapshot.title}</h2>{sourceSnapshot.yieldText && <p>Source yield: {sourceSnapshot.yieldText}</p>}

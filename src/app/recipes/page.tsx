@@ -14,8 +14,9 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
   const allDinners = await listDinnerRecipes();
   const visibleWhere = await import("@/repositories/recipe-visibility").then((module) => module.recipeVisibility("home", false));
   const lunches = await prisma.recipe.findMany({ where: { AND: [visibleWhere, { role: "lunch" }] },
-    orderBy: [{ title: "asc" }, { version: "desc" }] });
-  const currentLunches = [...new Map([...lunches].reverse().map((recipe) => [recipe.recipeKey, recipe])).values()];
+    orderBy: [{ recipeKey: "asc" }, { version: "desc" }] });
+  const currentLunches = [...new Map([...lunches].reverse().map((recipe) => [recipe.recipeKey, recipe])).values()]
+    .sort((a, b) => a.title.localeCompare(b.title));
   const recipes = needle ? allDinners.filter((recipe) => [recipe.title, recipe.summary,
     ...recipe.tags.map((tag) => tag.value)].some((value) => value.toLocaleLowerCase().includes(needle))) : allDinners;
   const shownLunches = needle ? currentLunches.filter((recipe) => [recipe.title, recipe.summary]
@@ -56,7 +57,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
         })}</ul></section>}
         {entries.some((entry) => entry.archivedAt) && <section className="panel recipe-section"><h2>Archived recipes</h2><ul>{entries.filter((entry) => entry.archivedAt).map((entry) => <li key={entry.id}>
           <Link href={`/recipes/${entry.recipeKey}`}>{archivedTitles.get(entry.currentRecipeId ?? "") ?? entry.recipeKey}</Link> <form action={archiveRecipeAction}>
-            <input type="hidden" name="entryId" value={entry.id} /><input type="hidden" name="archived" value="0" /><button type="submit">Restore</button></form>
+            <input type="hidden" name="recipeKey" value={entry.recipeKey} /><input type="hidden" name="archived" value="0" /><button type="submit">Restore</button></form>
         </li>)}</ul></section>}
         <div className="library-count">{recipes.length} {recipes.length === 1 ? "dinner" : "dinners"}{search ? ` matching “${search}”` : ""}</div>
         {recipes.length === 0 && <p className="library-empty">{search ? "No matching dinners. Try another search or clear it." : "No dinners in this library yet. Add a recipe or include starter recipes."}</p>}
@@ -70,26 +71,26 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
                 <p>{decodeRecipeText(recipe.summary)}</p>
                 {recipe.lunches.length > 0 && <div className="recipe-card-lunch">Leftover lunch: {recipe.lunches.map((lunch) => lunch.title).join(", ")}</div>}
                 <Link className="text-link" href={`/recipes/${recipe.recipeKey}`}>View recipe <span aria-hidden="true">→</span></Link>
-                {entryByKey.has(recipe.recipeKey) && <div className="recipe-controls"><form action={editRecipeAction}>
-                  <input type="hidden" name="entryId" value={entryByKey.get(recipe.recipeKey)!.id} /><button type="submit">Edit</button>
-                </form><form action={setRecipePlanningAction}><input type="hidden" name="entryId" value={entryByKey.get(recipe.recipeKey)!.id} />
-                  <input type="hidden" name="include" value={entryByKey.get(recipe.recipeKey)!.includeInPlanning ? "0" : "1"} />
-                  <button type="submit">{entryByKey.get(recipe.recipeKey)!.includeInPlanning ? "Pause suggestions" : "Use in plans"}</button>
-                </form><form action={archiveRecipeAction}><input type="hidden" name="entryId" value={entryByKey.get(recipe.recipeKey)!.id} />
-                  <input type="hidden" name="archived" value="1" /><button type="submit">Archive</button></form></div>}
+                <div className="recipe-controls"><form action={editRecipeAction}>
+                  <input type="hidden" name="recipeKey" value={recipe.recipeKey} /><button type="submit">Edit</button>
+                </form><form action={setRecipePlanningAction}><input type="hidden" name="recipeKey" value={recipe.recipeKey} />
+                  <input type="hidden" name="include" value={entryByKey.get(recipe.recipeKey)?.includeInPlanning === false ? "1" : "0"} />
+                  <button type="submit">{entryByKey.get(recipe.recipeKey)?.includeInPlanning === false ? "Use in plans" : "Pause suggestions"}</button>
+                </form><form action={archiveRecipeAction}><input type="hidden" name="recipeKey" value={recipe.recipeKey} />
+                  <input type="hidden" name="archived" value="1" /><button type="submit">Archive</button></form></div>
               </article>
             );
           })}
         </section>
-        {shownLunches.length > 0 && <section className="panel recipe-section"><h2>Lunch recipes</h2>
-          <ul>{shownLunches.map((recipe) => <li key={recipe.id}><Link href={`/recipes/${recipe.recipeKey}`}>{recipe.title}</Link>
-            {entryByKey.has(recipe.recipeKey) && <div className="recipe-controls"><form action={editRecipeAction}>
-              <input type="hidden" name="entryId" value={entryByKey.get(recipe.recipeKey)!.id} /><button type="submit">Edit</button>
-            </form><form action={setRecipePlanningAction}><input type="hidden" name="entryId" value={entryByKey.get(recipe.recipeKey)!.id} />
-              <input type="hidden" name="include" value={entryByKey.get(recipe.recipeKey)!.includeInPlanning ? "0" : "1"} />
-              <button type="submit">{entryByKey.get(recipe.recipeKey)!.includeInPlanning ? "Pause suggestions" : "Use in plans"}</button>
-            </form><form action={archiveRecipeAction}><input type="hidden" name="entryId" value={entryByKey.get(recipe.recipeKey)!.id} />
-              <input type="hidden" name="archived" value="1" /><button type="submit">Archive</button></form></div>}
+        {shownLunches.length > 0 && <section className="lunch-library"><h2>Lunch recipes</h2>
+          <ul className="lunch-library-grid">{shownLunches.map((recipe) => <li className="lunch-library-card" key={recipe.id}><span className="overline">Lunch · {recipe.totalMinutes} min</span><h3><Link href={`/recipes/${recipe.recipeKey}`}>{recipe.title}</Link></h3><p>{decodeRecipeText(recipe.summary)}</p>
+            <div className="recipe-controls"><form action={editRecipeAction}>
+              <input type="hidden" name="recipeKey" value={recipe.recipeKey} /><button type="submit">Edit</button>
+            </form><form action={setRecipePlanningAction}><input type="hidden" name="recipeKey" value={recipe.recipeKey} />
+              <input type="hidden" name="include" value={entryByKey.get(recipe.recipeKey)?.includeInPlanning === false ? "1" : "0"} />
+              <button type="submit">{entryByKey.get(recipe.recipeKey)?.includeInPlanning === false ? "Use in plans" : "Pause suggestions"}</button>
+            </form><form action={archiveRecipeAction}><input type="hidden" name="recipeKey" value={recipe.recipeKey} />
+              <input type="hidden" name="archived" value="1" /><button type="submit">Archive</button></form></div>
           </li>)}</ul>
         </section>}
       </div>

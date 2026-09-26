@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { draftSchema, manualDraftFromUrl } from "@/domain/meals/personal-recipe";
 import { prisma } from "@/services/prisma";
 import { importRecipeUrl, previewRecipePage } from "@/services/import-recipe";
-import { createDraft, createRevisionDraft, pairPersonalRecipes, PersonalRecipeError, publishDraft, saveDraft, setRecipeArchived } from "@/services/personal-recipes";
+import { createDraft, createRevisionDraft, ensureRecipeEntry, pairPersonalRecipes, PersonalRecipeError, publishDraft, saveDraft, setRecipeArchived } from "@/services/personal-recipes";
 
 const errorText = (cause: unknown) => cause instanceof PersonalRecipeError ? cause.message : "Could not save the recipe. Please try again.";
 const toLines = (value: FormDataEntryValue | null) => typeof value === "string" ? value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
@@ -86,7 +86,7 @@ export async function saveRecipeDraftAction(formData: FormData) {
 
 export async function editRecipeAction(formData: FormData) {
   try {
-    const draft = await createRevisionDraft("home", String(formData.get("entryId") ?? ""));
+    const draft = await createRevisionDraft("home", String(formData.get("recipeKey") ?? ""));
     redirect(`/recipes/drafts/${draft.id}`);
   } catch (cause) {
     if (cause && typeof cause === "object" && "digest" in cause) throw cause;
@@ -95,10 +95,11 @@ export async function editRecipeAction(formData: FormData) {
 }
 
 export async function archiveRecipeAction(formData: FormData) {
-  const entryId = String(formData.get("entryId") ?? "");
   try {
-    await setRecipeArchived("home", entryId, formData.get("archived") === "1");
+    const entry = await ensureRecipeEntry("home", String(formData.get("recipeKey") ?? ""));
+    await setRecipeArchived("home", entry.id, formData.get("archived") === "1");
     revalidatePath("/recipes");
+    revalidatePath("/");
   } catch (cause) {
     redirect(`/recipes?error=${encodeURIComponent(errorText(cause))}`);
   }
@@ -127,10 +128,13 @@ export async function pairRecipesAction(formData: FormData) {
 }
 
 export async function setRecipePlanningAction(formData: FormData) {
-  const entryId = String(formData.get("entryId") ?? "");
-  const result = await prisma.recipeEntry.updateMany({ where: { id: entryId, householdId: "home" },
-    data: { includeInPlanning: formData.get("include") === "1" } });
-  if (result.count !== 1) redirect("/recipes?error=Recipe%20not%20found.");
+  try {
+    const entry = await ensureRecipeEntry("home", String(formData.get("recipeKey") ?? ""));
+    await prisma.recipeEntry.update({ where: { id: entry.id },
+      data: { includeInPlanning: formData.get("include") === "1" } });
+  } catch (cause) {
+    redirect(`/recipes?error=${encodeURIComponent(errorText(cause))}`);
+  }
   revalidatePath("/recipes");
   revalidatePath("/");
   redirect("/recipes");

@@ -18,7 +18,7 @@ The primary success criterion is whether the household accepts a useful weekly p
 - Distinguish dislike from temporary fatigue: a favorite can still need a break.
 - Reduce forgotten leftovers without making inventory maintenance another chore.
 - Write and edit household recipes, and import a recipe from a pasted website link into an editable review draft.
-- Use personal recipes for real weekly planning; the AI-generated prototype catalog is testing content, not a substitute for the household's own collection.
+- Use personal recipes for real weekly planning; the sourced starter catalog is a convenient starting point, not a substitute for the household's own collection.
 
 ### Proposed starting defaults, adjustable in the product
 
@@ -47,7 +47,7 @@ The weekly plan is the main screen. A shortlist appears when replacing a meal; t
 - Barcode scanning, receipt parsing, or automatic fridge inventory.
 - Nutrition targets, medical diet advice, social features, or breakfast planning.
 - Push notifications or complex machine learning infrastructure.
-- Automatically generated cooking instructions. Support household-written recipes and source-preserving imports alongside the prototype catalog, with explicit reuse pairings.
+- Automatically generated cooking instructions. Support household-written recipes and source-preserving imports alongside the sourced starter catalog, with explicit reuse pairings.
 - Public multi-household hosting and individual accounts. Build a local/private household prototype first; add authentication before any public release.
 
 ## 3. Proposed architecture
@@ -252,7 +252,7 @@ Acceptance: a new local database can be created and seeded from documented comma
 
 ### Phase 2: Reviewed recipe and transformation catalog
 
-Current catalog: 32 dinners (24 original prototypes and 8 source-backed adaptations) and 8 transformed lunches are seeded and browsable. Four disjoint six-dinner selections, each with two transformed lunches, are covered by catalog tests. The original prototypes and source-backed adaptations have structural and food-safety checks; the Plate Ahead versions have not been kitchen-tested.
+Current catalog: 32 dinners and 8 transformed lunches are seeded and browsable, each with a linked published source and an original, concise Plate Ahead adaptation. The 24 original prototype dinners and 8 original lunches were replaced by version 2 recipes; their version 1 records remain in existing databases for historical plans. Four disjoint six-dinner selections, each with two transformed lunches, are covered by catalog tests. The Plate Ahead adaptations have structural and food-safety checks but have not been kitchen-tested.
 
 - [x] Seed 24 varied dinner recipes and 8 reviewed lunch transformations, with complete quantities, steps, tags, timings, and provenance.
 - [x] Ensure the catalog can generate at least two distinct six-dinner weeks with the default lunch targets.

@@ -8,17 +8,18 @@ export async function listDinnerRecipes(householdId = "home") {
   const [allDinners, transformations, lunches] = await Promise.all([
     prisma.recipe.findMany({
       where: { AND: [where, { role: "dinner" }] },
-      orderBy: [{ title: "asc" }, { version: "desc" }],
+      orderBy: [{ recipeKey: "asc" }, { version: "desc" }],
       include: { tags: true },
     }),
     prisma.transformation.findMany({ include: { sourceComponent: true } }),
-    prisma.recipe.findMany({ where: { AND: [where, { role: "lunch" }] }, select: { recipeKey: true, title: true, version: true } }),
+    prisma.recipe.findMany({ where: { AND: [where, { role: "lunch" }] }, orderBy: [{ recipeKey: "asc" }, { version: "desc" }],
+      select: { recipeKey: true, title: true, version: true } }),
   ]);
   const latest = new Map<string, (typeof allDinners)[number]>();
   for (const recipe of allDinners) if (!latest.has(recipe.recipeKey)) latest.set(recipe.recipeKey, recipe);
-  const lunchNames = new Map(lunches.map((recipe) => [recipe.recipeKey, recipe.title]));
+  const lunchNames = new Map([...lunches].reverse().map((recipe) => [recipe.recipeKey, recipe.title]));
 
-  return [...latest.values()].map((recipe) => ({
+  return [...latest.values()].sort((a, b) => a.title.localeCompare(b.title)).map((recipe) => ({
     ...recipe,
     lunches: transformations
       .filter((transformation) => transformation.sourceComponent.recipeId === recipe.id)
@@ -49,7 +50,8 @@ export async function getRecipe(recipeKey: string, householdId = "home", version
 
   const outgoing = recipe.components.flatMap((component) => component.sourceTransformations.map((transformation) => ({ component, transformation })));
   const incoming = await prisma.transformation.findMany({
-    where: { targetRecipeKey: recipeKey },
+    where: { targetRecipeKey: recipeKey,
+      inputs: { some: { targetComponentId: { in: recipe.components.map((component) => component.id) } } } },
     include: { inputs: true, sourceComponent: { include: { recipe: true } } },
   });
   const targetKeys = outgoing.map(({ transformation }) => transformation.targetRecipeKey);

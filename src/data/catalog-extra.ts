@@ -345,10 +345,10 @@ export const extraTransformations: CatalogTransformation[] = [
     compatibleState: "Cooked, plain lentils", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
   { key: "salmon-to-pita-melts", sourceRecipeKey: "paprika-salmon-potatoes", sourceComponentKey: "salmon",
     targetRecipeKey: "salmon-cucumber-pita-melts", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
-    description: "Reserve plain cooked salmon before serving it with potatoes; make warm pita melts with cool cucumber.",
+    description: "Reserve plain cooked salmon before seasoning dinner portions; make chilled salmon salad pitas with cucumber.",
     compatibleState: "Fully cooked, plain salmon", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
   { key: "chickpeas-to-coconut-soup", sourceRecipeKey: "herbed-chickpea-pilaf", sourceComponentKey: "chickpeas",
     targetRecipeKey: "coconut-chickpea-tomato-soup", targetComponentKey: "assembly", required: { amount: 200, unit: "g" },
-    description: "Save plain roasted chickpeas before combining dinner pilaf; simmer them in a coconut-tomato soup.",
-    compatibleState: "Roasted, plain chickpeas", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
+    description: "Save drained chickpeas before combining dinner pilaf; simmer them in a coconut-tomato soup.",
+    compatibleState: "Drained, plain chickpeas", storageGuidance: leftoverStorage, storageSourceUrl: storageSource },
 ];
